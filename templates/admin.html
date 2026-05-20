@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel{% endblock %}
+{% block page_title %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon mint">👥</div>
+      <div><div class="stat-value">{{ total_users }}</div><div class="stat-label">Total Users</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon indigo">📋</div>
+      <div><div class="stat-value">{{ total_jobs }}</div><div class="stat-label">Total Jobs</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">✅</div>
+      <div><div class="stat-value">{{ active_jobs }}</div><div class="stat-label">Active Jobs</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">⏸</div>
+      <div><div class="stat-value">{{ total_jobs - active_jobs }}</div><div class="stat-label">Inactive Jobs</div></div>
+    </div>
+  </div>
+
+  <!-- Scraper Control -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Scraper Control</div>
+        <div class="section-sub">Trigger scraping runs for each source</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px;">
+      {% for source in ['TechJobs NG', 'Jobberman', 'LinkedIn Demo', 'Indeed Demo'] %}
+      <div class="scraper-source">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="source-dot green"></div>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem;">{{ source }}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">Demo scraper</div>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ source }}">▶ Run</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Scraper logs -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="section-header">
+      <div class="section-title">Scraper Logs</div>
+      <span style="font-size:0.8rem;color:var(--text-muted);">Last 20 runs</span>
+    </div>
+    {% if logs %}
+    <div class="table-wrap" style="margin-top:12px;">
+      <table>
+        <thead>
+          <tr><th>Source</th><th>Status</th><th>Found</th><th>Added</th><th>Started</th><th>Message</th></tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td style="font-weight:600;">{{ log.source }}</td>
+            <td>
+              <span class="badge {% if log.status == 'success' %}badge-green{% elif log.status == 'failed' %}badge-red{% else %}badge-amber{% endif %}">
+                {{ log.status }}
+              </span>
+            </td>
+            <td>{{ log.jobs_found }}</td>
+            <td style="color:var(--mint);font-weight:600;">+{{ log.jobs_added }}</td>
+            <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.started_at.strftime('%b %d, %H:%M') }}</td>
+            <td style="font-size:0.78rem;color:var(--text-muted);">{{ log.message or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:30px 0;"><div>No scraper runs yet. Click Run on a source above.</div></div>
+    {% endif %}
+  </div>
+
+  <!-- User management -->
+  <div class="card">
+    <div class="section-header">
+      <div class="section-title">User Management</div>
+      <span style="font-size:0.8rem;color:var(--text-muted);">{{ users|length }} users</span>
+    </div>
+    <div class="table-wrap" style="margin-top:12px;">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td style="font-weight:600;">{{ user.name }}</td>
+            <td style="color:var(--text-muted);">{{ user.email }}</td>
+            <td>
+              <span class="badge {% if user.role == 'admin' %}badge-mint{% else %}badge-gray{% endif %}">{{ user.role }}</span>
+            </td>
+            <td>
+              <span class="badge {% if user.is_active %}badge-green{% else %}badge-red{% endif %}">
+                {{ 'Active' if user.is_active else 'Inactive' }}
+              </span>
+            </td>
+            <td style="color:var(--text-muted);font-size:0.8rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+            <td>
+              {% if user.id != current_user.id %}
+              <button class="btn btn-outline btn-sm toggle-user-btn" data-user-id="{{ user.id }}">
+                {{ 'Deactivate' if user.is_active else 'Activate' }}
+              </button>
+              {% else %}
+              <span style="font-size:0.78rem;color:var(--text-muted);">You</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- KPIs -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon mint">📋</div>
+      <div>
+        <div class="stat-value">{{ my_apps }}</div>
+        <div class="stat-label">Total Applications</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">💬</div>
+      <div>
+        <div class="stat-value">{{ interview_rate }}%</div>
+        <div class="stat-label">Interview Rate</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon indigo">♥</div>
+      <div>
+        <div class="stat-value">{{ my_saved }}</div>
+        <div class="stat-label">Saved Jobs</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon mint">🌐</div>
+      <div>
+        <div class="stat-value">{{ total_jobs }}</div>
+        <div class="stat-label">Total Listings</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- Application Status -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">My Application Status</div>
+      </div>
+      {% if status_dist %}
+      {% set total = namespace(n=0) %}
+      {% for s, c in status_dist %}{% set total.n = total.n + c %}{% endfor %}
+      <div class="chart-bar-wrap" style="margin-top:8px;">
+        {% set colors = {'applied':'var(--indigo)','interview':'#ffb400','offer':'#00c864','rejected':'#ff5555','withdrawn':'var(--text-muted)'} %}
+        {% for status, count in status_dist %}
+        <div class="chart-bar-row">
+          <div class="chart-bar-label">{{ status|title }}</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" data-width="{{ ((count / total.n) * 100)|round }}%" style="background:{{ colors.get(status, 'var(--indigo)') }};"></div>
+          </div>
+          <div class="chart-bar-value">{{ count }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:30px 0;">
+        <div>No application data yet</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Job Type Distribution -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">Jobs by Type</div>
+        <div class="section-sub">All listings</div>
+      </div>
+      {% if type_dist %}
+      {% set ttotal = namespace(n=0) %}
+      {% for t, c in type_dist %}{% if t %}{% set ttotal.n = ttotal.n + c %}{% endif %}{% endfor %}
+      <div class="chart-bar-wrap" style="margin-top:8px;">
+        {% for job_type, count in type_dist %}
+        {% if job_type %}
+        <div class="chart-bar-row">
+          <div class="chart-bar-label">{{ job_type|title }}</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" data-width="{{ ((count / [ttotal.n, 1]|max) * 100)|round }}%"></div>
+          </div>
+          <div class="chart-bar-value">{{ count }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:30px 0;"><div>No data yet</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Source breakdown -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">Jobs by Source</div>
+      </div>
+      {% if source_dist %}
+      {% set stotal = namespace(n=0) %}
+      {% for s, c in source_dist %}{% if s %}{% set stotal.n = stotal.n + c %}{% endif %}{% endfor %}
+      <div class="chart-bar-wrap" style="margin-top:8px;">
+        {% for source, count in source_dist %}
+        {% if source %}
+        <div class="chart-bar-row">
+          <div class="chart-bar-label" style="font-size:0.75rem;">{{ source[:12] }}{% if source|length > 12 %}…{% endif %}</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" data-width="{{ ((count / [stotal.n, 1]|max) * 100)|round }}%"></div>
+          </div>
+          <div class="chart-bar-value">{{ count }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:30px 0;"><div>No data yet</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Tips card -->
+    <div class="card" style="background:linear-gradient(135deg,rgba(59,0,255,0.06),rgba(0,245,170,0.04));border-color:rgba(0,245,170,0.15);">
+      <div class="section-title" style="margin-bottom:12px;">💡 Job Search Tips</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% set tips = [
+          ('Set alerts for your target role', 'Get notified when new matching jobs are posted.'),
+          ('Track every application', 'Don\'t lose track — log every job you apply to.'),
+          ('Aim for 10+ apps/week', 'Volume + quality = more interview chances.'),
+          ('Follow up after interviews', 'A quick thank-you note stands out.'),
+        ] %}
+        {% for title, desc in tips %}
+        <div style="display:flex;gap:10px;font-size:0.875rem;">
+          <span style="color:var(--mint);flex-shrink:0;">✦</span>
+          <div>
+            <div style="font-weight:600;margin-bottom:1px;">{{ title }}</div>
+            <div style="color:var(--text-muted);font-size:0.8rem;">{{ desc }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

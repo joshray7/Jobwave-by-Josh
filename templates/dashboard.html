@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon mint">🔍</div>
+      <div>
+        <div class="stat-value">{{ recent_jobs|length }}</div>
+        <div class="stat-label">New Jobs Today</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon indigo">♥</div>
+      <div>
+        <div class="stat-value">{{ saved_count }}</div>
+        <div class="stat-label">Saved Jobs</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">📋</div>
+      <div>
+        <div class="stat-value">{{ app_count }}</div>
+        <div class="stat-label">Applications</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon indigo">🔔</div>
+      <div>
+        <div class="stat-value">{{ alert_count }}</div>
+        <div class="stat-label">Active Alerts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two column -->
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+    <!-- Recent Jobs -->
+    <div>
+      <div class="section-header">
+        <div>
+          <div class="section-title">Latest Listings</div>
+          <div class="section-sub">Freshest jobs from all sources</div>
+        </div>
+        <a href="{{ url_for('jobs') }}" class="btn btn-outline btn-sm">View All →</a>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% for job in recent_jobs %}
+        <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;">
+          <div class="company-logo" style="width:40px;height:40px;font-size:14px;">{{ job.company[0] }}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <a href="{{ url_for('job_detail', job_id=job.id) }}" style="font-weight:700;font-size:0.9rem;color:var(--text);">{{ job.title }}</a>
+              <span class="badge badge-mint">{{ job.job_type or 'full-time' }}</span>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">{{ job.company }} · {{ job.location }}</div>
+          </div>
+          {% if job.salary_min %}
+          <div style="font-size:0.8rem;font-weight:700;color:var(--mint);flex-shrink:0;">${{ '{:,.0f}'.format(job.salary_min/1000) }}k+</div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>No jobs yet</h3>
+          <p>Run the scraper from the Admin panel to populate listings.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Application pipeline -->
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">Application Pipeline</div>
+          <a href="{{ url_for('applications') }}" class="btn btn-ghost btn-sm">View All</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+          {% set statuses = [('applied','badge-indigo','📨'),('interview','badge-amber','💬'),('offer','badge-green','🎉'),('rejected','badge-red','✕')] %}
+          {% for status, cls, icon in statuses %}
+          {% set count = status_counts.get(status, 0) %}
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
+              <span>{{ icon }}</span>
+              <span style="text-transform:capitalize;">{{ status }}</span>
+            </div>
+            <span class="badge {{ cls }}">{{ count }}</span>
+          </div>
+          {% if not loop.last %}
+          <div class="progress">
+            <div class="progress-fill" data-width="{{ [count * 20, 100]|min }}%"></div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Recent applications -->
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">Recent Activity</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for app in recent_apps %}
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--indigo-dim);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--mint);flex-shrink:0;">{{ app.job.company[0] }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ app.job.title }}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);">{{ app.applied_at.strftime('%b %d') }}</div>
+            </div>
+            <span class="badge {% if app.status == 'applied' %}badge-indigo{% elif app.status == 'interview' %}badge-amber{% elif app.status == 'offer' %}badge-green{% else %}badge-red{% endif %}">{{ app.status }}</span>
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:0.82rem;">
+            No applications yet.<br>
+            <a href="{{ url_for('jobs') }}">Browse jobs →</a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Quick links -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:12px;">Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="{{ url_for('jobs') }}?type=remote" class="btn btn-outline btn-sm" style="justify-content:flex-start;">🌐 Browse Remote Jobs</a>
+          <a href="{{ url_for('alerts') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">🔔 Manage Alerts</a>
+          <a href="{{ url_for('export_jobs') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">↓ Export Saved Jobs</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

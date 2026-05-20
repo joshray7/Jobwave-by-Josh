@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Browse Jobs{% endblock %}
+{% block page_title %}Browse Jobs{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('export_jobs') }}" class="btn btn-outline btn-sm">↓ Export</a>
+<a href="{{ url_for('alerts') }}" class="btn btn-primary btn-sm">🔔 Set Alert</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Search Bar -->
+<form method="GET" action="{{ url_for('jobs') }}" id="search-form">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    <div class="search-bar" style="flex:2;min-width:200px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="q" value="{{ q }}" placeholder="Job title, company, skill…" id="live-search" autocomplete="off">
+    </div>
+    <div class="search-bar" style="flex:1;min-width:140px;">
+      <span class="search-icon">📍</span>
+      <input type="text" name="location" value="{{ location }}" placeholder="Location…">
+    </div>
+    <select name="type" class="form-control" style="flex:0 0 140px;">
+      <option value="">All Types</option>
+      {% for t in ['full-time','part-time','remote','contract','internship'] %}
+      <option value="{{ t }}" {% if job_type == t %}selected{% endif %}>{{ t|title }}</option>
+      {% endfor %}
+    </select>
+    <select name="experience" class="form-control" style="flex:0 0 140px;">
+      <option value="">All Levels</option>
+      {% for e in ['entry','mid','senior','lead'] %}
+      <option value="{{ e }}" {% if experience == e %}selected{% endif %}>{{ e|title }}</option>
+      {% endfor %}
+    </select>
+    <select name="sort" class="form-control" style="flex:0 0 130px;">
+      <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
+      <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest</option>
+      <option value="salary" {% if sort == 'salary' %}selected{% endif %}>Salary ↓</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if q or location or job_type or experience %}
+    <a href="{{ url_for('jobs') }}" class="btn btn-outline">Clear</a>
+    {% endif %}
+  </div>
+
+  <!-- Source chips -->
+  {% if sources %}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+    <a href="{{ url_for('jobs', q=q, location=location) }}" class="badge {% if not source %}badge-indigo{% else %}badge-gray{% endif %}" style="cursor:pointer;padding:5px 12px;">All Sources</a>
+    {% for src in sources %}
+    <a href="{{ url_for('jobs', q=q, location=location, source=src) }}" class="badge {% if source == src %}badge-mint{% else %}badge-gray{% endif %}" style="cursor:pointer;padding:5px 12px;">{{ src }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</form>
+
+<!-- Results header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+  <div style="font-size:0.875rem;color:var(--text-muted);">
+    <strong style="color:var(--text);">{{ pagination.total }}</strong> jobs found
+    {% if q %} for "<strong style="color:var(--mint);">{{ q }}</strong>"{% endif %}
+  </div>
+  <div style="font-size:0.8rem;color:var(--text-muted);">
+    Page {{ pagination.page }} of {{ pagination.pages }}
+  </div>
+</div>
+
+<!-- Job grid -->
+{% if jobs %}
+<div class="jobs-grid stagger">
+  {% for job in jobs %}
+  <div class="job-card">
+    <div class="job-card-header">
+      <div>
+        <div class="company-logo">{{ job.company[0] }}</div>
+      </div>
+      <div style="flex:1;min-width:0;padding-left:12px;">
+        <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-title" style="color:var(--text);">{{ job.title }}</a>
+        <div class="job-company">{{ job.company }}</div>
+      </div>
+      <button class="save-btn {% if job.id in saved_ids %}saved{% endif %}" data-job-id="{{ job.id }}" title="{{ 'Remove' if job.id in saved_ids else 'Save' }}">
+        {{ '♥' if job.id in saved_ids else '♡' }}
+      </button>
+    </div>
+
+    <div class="job-meta">
+      {% if job.location %}<span class="badge badge-gray">📍 {{ job.location }}</span>{% endif %}
+      <span class="badge badge-indigo">{{ job.job_type or 'full-time' }}</span>
+      {% if job.experience %}<span class="badge badge-amber">{{ job.experience }}</span>{% endif %}
+    </div>
+
+    {% if job.salary_min %}
+    <div class="job-salary">${{ '{:,.0f}'.format(job.salary_min/1000) }}k — ${{ '{:,.0f}'.format(job.salary_max/1000) }}k</div>
+    {% endif %}
+
+    {% if job.tags %}
+    <div class="job-tags">
+      {% for tag in job.tags.split(',')[:5] %}
+      <span class="tag">{{ tag.strip() }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="job-card-footer">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="job-time">{{ job.scraped_at.strftime('%b %d') }}</span>
+        <span class="badge badge-gray" style="font-size:0.68rem;">{{ job.source }}</span>
+        {% if job.id in applied_ids %}<span class="badge badge-green">✓ Applied</span>{% endif %}
+      </div>
+      <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline btn-sm">View →</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+<div class="pagination">
+  {% if pagination.has_prev %}
+  <a href="{{ url_for('jobs', q=q, location=location, type=job_type, experience=experience, source=source, sort=sort, page=pagination.prev_num) }}" class="page-btn">‹</a>
+  {% else %}
+  <span class="page-btn disabled">‹</span>
+  {% endif %}
+
+  {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+    {% if page_num %}
+    <a href="{{ url_for('jobs', q=q, location=location, type=job_type, experience=experience, source=source, sort=sort, page=page_num) }}" class="page-btn {% if page_num == pagination.page %}active{% endif %}">{{ page_num }}</a>
+    {% else %}
+    <span style="color:var(--text-muted);padding:0 4px;">…</span>
+    {% endif %}
+  {% endfor %}
+
+  {% if pagination.has_next %}
+  <a href="{{ url_for('jobs', q=q, location=location, type=job_type, experience=experience, source=source, sort=sort, page=pagination.next_num) }}" class="page-btn">›</a>
+  {% else %}
+  <span class="page-btn disabled">›</span>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🔍</div>
+  <h3>No jobs found</h3>
+  <p>Try different search terms or clear your filters.</p>
+  <a href="{{ url_for('jobs') }}" class="btn btn-outline" style="margin-top:16px;">Clear Filters</a>
+</div>
+{% endif %}
+
+{% endblock %}

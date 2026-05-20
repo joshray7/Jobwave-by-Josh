@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Applications{% endblock %}
+{% block page_title %}Application Tracker{% endblock %}
+
+{% block content %}
+<!-- Status filters -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+  <a href="{{ url_for('applications') }}" class="badge {% if not status_filter %}badge-indigo{% else %}badge-gray{% endif %}" style="cursor:pointer;padding:6px 14px;font-size:0.82rem;">All ({{ status_counts.values()|sum }})</a>
+  {% for s, cls in [('applied','badge-indigo'),('interview','badge-amber'),('offer','badge-green'),('rejected','badge-red'),('withdrawn','badge-gray')] %}
+  <a href="{{ url_for('applications', status=s) }}" class="badge {% if status_filter == s %}{{ cls }}{% else %}badge-gray{% endif %}" style="cursor:pointer;padding:6px 14px;font-size:0.82rem;">{{ s|title }} ({{ status_counts.get(s,0) }})</a>
+  {% endfor %}
+</div>
+
+{% if applications %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Company</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Applied</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for app in applications %}
+      <tr>
+        <td>
+          <a href="{{ url_for('job_detail', job_id=app.job.id) }}" style="font-weight:600;color:var(--text);">{{ app.job.title }}</a>
+        </td>
+        <td style="color:var(--text-dim);">{{ app.job.company }}</td>
+        <td><span class="badge badge-gray">{{ app.job.job_type or 'full-time' }}</span></td>
+        <td>
+          <select class="form-control status-select" data-app-id="{{ app.id }}" style="width:auto;font-size:0.8rem;padding:5px 10px;">
+            {% for s in ['applied','interview','offer','rejected','withdrawn'] %}
+            <option value="{{ s }}" {% if app.status == s %}selected{% endif %}>{{ s|title }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td style="color:var(--text-muted);font-size:0.82rem;">{{ app.applied_at.strftime('%b %d, %Y') }}</td>
+        <td>
+          <button class="btn btn-danger btn-sm delete-app-btn" data-app-id="{{ app.id }}">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📋</div>
+  <h3>No applications tracked</h3>
+  <p>Track your applications from any job listing page.</p>
+  <a href="{{ url_for('jobs') }}" class="btn btn-primary" style="margin-top:16px;">Browse Jobs →</a>
+</div>
+{% endif %}
+{% endblock %}

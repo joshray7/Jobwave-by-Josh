@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Saved Jobs{% endblock %}
+{% block page_title %}Saved Jobs{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('export_jobs') }}?saved=1" class="btn btn-outline btn-sm">↓ Export Saved</a>
+{% endblock %}
+
+{% block content %}
+{% if saved %}
+<div class="jobs-grid stagger">
+  {% for s in saved %}
+  {% set job = s.job %}
+  <div class="job-card">
+    <div class="job-card-header">
+      <div class="company-logo">{{ job.company[0] }}</div>
+      <div style="flex:1;min-width:0;padding-left:12px;">
+        <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-title" style="color:var(--text);">{{ job.title }}</a>
+        <div class="job-company">{{ job.company }}</div>
+      </div>
+      <button class="save-btn saved" data-job-id="{{ job.id }}">♥</button>
+    </div>
+    <div class="job-meta">
+      {% if job.location %}<span class="badge badge-gray">📍 {{ job.location }}</span>{% endif %}
+      <span class="badge badge-indigo">{{ job.job_type or 'full-time' }}</span>
+    </div>
+    {% if job.salary_min %}<div class="job-salary">${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</div>{% endif %}
+    <div class="job-card-footer">
+      <span class="job-time">Saved {{ s.saved_at.strftime('%b %d') }}</span>
+      <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline btn-sm">View →</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">♡</div>
+  <h3>No saved jobs yet</h3>
+  <p>Click the heart icon on any job to save it here.</p>
+  <a href="{{ url_for('jobs') }}" class="btn btn-primary" style="margin-top:16px;">Browse Jobs →</a>
+</div>
+{% endif %}
+{% endblock %}

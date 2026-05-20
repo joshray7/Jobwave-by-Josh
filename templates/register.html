@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Create Account{% endblock %}
+{% block public_content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div class="logo-mark">JW</div>
+        <div class="logo-text">Job<span>Wave</span></div>
+      </div>
+    </div>
+    <div class="auth-title">Create your account</div>
+    <div class="auth-subtitle">Start tracking your job search today</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for category, msg in messages %}
+      <div class="flash {{ category }}" style="margin-top:12px;">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">Full name</label>
+        <input type="text" name="name" class="form-control" placeholder="Your name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" name="email" class="form-control" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password <span style="color:var(--text-muted);font-weight:400;">(min. 6 chars)</span></label>
+        <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-mint" style="width:100%;justify-content:center;margin-top:4px;">Create Account →</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
