@@ -3,6 +3,8 @@ load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os, json, csv, io, threading, time
@@ -10,13 +12,36 @@ from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'jobwave-secret-2024')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///jobwave.db')
+
+# ─── Database config ────────────────────────────────────────────────────────────
+# Render provides DATABASE_URL starting with "postgres://" but SQLAlchemy
+# requires "postgresql://" — fix it automatically
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///jobwave.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = ''
+
+# ─── Rate Limiter ───────────────────────────────────────────────────────────────
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],          # no global limit — only apply where we decorate
+    storage_uri='memory://',    # in-memory; swap to redis:// in production
+)
+
+def on_rate_limit_exceeded(e):
+    if request.is_json or request.path.startswith('/api/'):
+        return jsonify({'error': 'Too many requests. Please slow down.'}), 429
+    flash('Too many attempts. Please wait a moment and try again.', 'error')
+    return redirect(request.referrer or url_for('login')), 429
+
+app.register_error_handler(429, on_rate_limit_exceeded)
 
 # ─── Models ────────────────────────────────────────────────────────────────────
 
@@ -141,6 +166,7 @@ def index():
 
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit('5 per hour', methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -169,6 +195,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute; 50 per hour', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -288,6 +315,7 @@ def saved_jobs():
 
 @app.route('/api/jobs/<int:job_id>/save', methods=['POST'])
 @login_required
+@limiter.limit('60 per minute')
 def toggle_save(job_id):
     job = Job.query.get_or_404(job_id)
     existing = SavedJob.query.filter_by(user_id=current_user.id, job_id=job_id).first()
@@ -320,6 +348,7 @@ def applications():
 
 @app.route('/api/applications', methods=['POST'])
 @login_required
+@limiter.limit('30 per minute')
 def create_application():
     job_id = request.json.get('job_id')
     job = Job.query.get_or_404(job_id)
@@ -366,6 +395,7 @@ def alerts():
 
 @app.route('/api/alerts', methods=['POST'])
 @login_required
+@limiter.limit('20 per hour')
 def create_alert():
     data = request.json
     alert = Alert(
@@ -499,6 +529,7 @@ def run_scraper_task(profile_name, app_context):
 @app.route('/api/scraper/run', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit('10 per hour')
 def trigger_scraper():
     source = request.json.get('source', 'demo')
     t = threading.Thread(target=run_scraper_task, args=(source, app.app_context()))
@@ -561,6 +592,7 @@ def toggle_job(job_id):
 
 @app.route('/api/jobs')
 @login_required
+@limiter.limit('100 per minute')
 def api_jobs():
     q = request.args.get('q', '')
     limit = min(request.args.get('limit', 20, type=int), 100)
