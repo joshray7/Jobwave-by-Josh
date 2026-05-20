@@ -66,10 +66,13 @@
           {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">🔍</div>
+        <div class="empty-state" style="padding:40px 20px;">
+          <div class="empty-icon">📭</div>
           <h3>No jobs yet</h3>
-          <p>Run the scraper from the Admin panel to populate listings.</p>
+          <p>There are no listings yet for now.</p>
+          {% if current_user.role == 'admin' %}
+          <a href="{{ url_for('admin') }}" class="btn btn-primary" style="margin-top:16px;">Run Scraper →</a>
+          {% endif %}
         </div>
         {% endfor %}
       </div>

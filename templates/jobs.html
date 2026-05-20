@@ -138,10 +138,18 @@
 
 {% else %}
 <div class="empty-state">
-  <div class="empty-icon">🔍</div>
-  <h3>No jobs found</h3>
-  <p>Try different search terms or clear your filters.</p>
-  <a href="{{ url_for('jobs') }}" class="btn btn-outline" style="margin-top:16px;">Clear Filters</a>
+  <div class="empty-icon">📭</div>
+  {% if q or location or job_type or experience or source %}
+    <h3>No jobs match your filters</h3>
+    <p>Try adjusting your search terms or clearing some filters.</p>
+    <a href="{{ url_for('jobs') }}" class="btn btn-outline" style="margin-top:16px;">Clear Filters</a>
+  {% else %}
+    <h3>No jobs yet</h3>
+    <p>The job board is empty. Ask an admin to run the JSearch scraper to fetch real listings.</p>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('admin') }}" class="btn btn-primary" style="margin-top:16px;">Go to Admin Panel →</a>
+    {% endif %}
+  {% endif %}
 </div>
 {% endif %}
 

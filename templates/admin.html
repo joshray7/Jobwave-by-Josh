@@ -26,22 +26,7 @@
   </div>
 
   <!-- API Key Status -->
-  <div class="card" style="margin-bottom:20px;border-color:{% if api_key_set %}rgba(0,245,170,0.2){% else %}rgba(255,180,0,0.2){% endif %};">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-      <div style="font-size:24px;">{% if api_key_set %}🔑{% else %}⚠️{% endif %}</div>
-      <div style="flex:1;">
-        <div style="font-weight:700;margin-bottom:3px;">JSearch API Key — {% if api_key_set %}<span style="color:var(--mint);">Configured ✓</span>{% else %}<span style="color:#ffb400;">Not Set</span>{% endif %}</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">
-          {% if api_key_set %}
-            Environment variable <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;">JSEARCH_API_KEY</code> is set. Scrapers will fetch real jobs.
-          {% else %}
-            Set <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;">JSEARCH_API_KEY</code> as an environment variable to enable real job fetching.
-            Get a free key at <a href="https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch" target="_blank" style="color:var(--mint);">RapidAPI →</a>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Scraper Control -->
   <div class="card" style="margin-bottom:20px;">
@@ -50,6 +35,7 @@
         <div class="section-title">JSearch Scraper Profiles</div>
         <div class="section-sub">Each profile runs a targeted real-job search via the JSearch API (Indeed + LinkedIn + more)</div>
       </div>
+      <button class="btn btn-danger btn-sm" id="clear-fake-btn">🗑 Clear Fake Jobs</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px;">
       {% for profile in scraper_profiles %}
@@ -149,4 +135,27 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('clear-fake-btn')?.addEventListener('click', async () => {
+  if (!confirm('This will delete all fake/demo jobs (non-JSearch). Real jobs stay. Continue?')) return;
+  const btn = document.getElementById('clear-fake-btn');
+  btn.disabled = true;
+  btn.textContent = 'Clearing…';
+  try {
+    const res = await fetch('/admin/clear-fake-jobs', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Deleted ${data.deleted} fake job(s)`, 'success');
+      setTimeout(() => location.reload(), 1000);
+    }
+  } catch {
+    showToast('Failed to clear jobs', 'error');
+    btn.disabled = false;
+    btn.textContent = '🗑 Clear Fake Jobs';
+  }
+});
+</script>
 {% endblock %}

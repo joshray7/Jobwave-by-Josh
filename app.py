@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -461,7 +463,7 @@ def analytics():
 
 def run_scraper_task(profile_name, app_context):
     with app_context:
-        from scrapers.jscraper import fetch_jsearch_jobs, get_profile
+        from scrapers.jsearch_scraper import fetch_jsearch_jobs, get_profile
         log = ScraperLog(source=profile_name, status='running')
         db.session.add(log)
         db.session.commit()
@@ -511,18 +513,26 @@ def trigger_scraper():
 @login_required
 @admin_required
 def admin():
-    from scrapers.jscraper import SEARCH_PROFILES
+    from scrapers.jsearch_scraper import SEARCH_PROFILES
     users = User.query.order_by(User.created_at.desc()).all()
     logs = ScraperLog.query.order_by(ScraperLog.started_at.desc()).limit(20).all()
     total_jobs = Job.query.count()
     active_jobs = Job.query.filter_by(is_active=True).count()
     total_users = User.query.count()
-    api_key_set = bool(os.environ.get('JSEARCH_API_KEY', ''))
     return render_template('admin.html', users=users, logs=logs,
                            total_jobs=total_jobs, active_jobs=active_jobs,
                            total_users=total_users,
-                           scraper_profiles=SEARCH_PROFILES,
-                           api_key_set=api_key_set)
+                           scraper_profiles=SEARCH_PROFILES)
+
+
+@app.route('/admin/clear-fake-jobs', methods=['POST'])
+@login_required
+@admin_required
+def clear_fake_jobs():
+    # Delete all jobs not from JSearch (the fake seeded ones)
+    deleted = Job.query.filter(Job.source != 'JSearch').delete()
+    db.session.commit()
+    return jsonify({'success': True, 'deleted': deleted})
 
 
 @app.route('/admin/users/<int:user_id>/toggle', methods=['POST'])
@@ -567,21 +577,7 @@ def api_jobs():
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
-def seed_demo_data():
-    if Job.query.count() > 0:
-        return
-    from scrapers.demo_scraper import scrape_demo_jobs
-    sources = ['TechJobs NG', 'Jobberman', 'LinkedIn Demo', 'Indeed Demo']
-    for src in sources:
-        jobs_data = scrape_demo_jobs(src)
-        for jd in jobs_data:
-            if not Job.query.filter_by(source_id=jd.get('source_id')).first():
-                db.session.add(Job(**jd))
-    db.session.commit()
-
-
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        seed_demo_data()
     app.run(debug=True)

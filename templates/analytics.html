@@ -50,10 +50,11 @@
       <div class="chart-bar-wrap" style="margin-top:8px;">
         {% set colors = {'applied':'var(--indigo)','interview':'#ffb400','offer':'#00c864','rejected':'#ff5555','withdrawn':'var(--text-muted)'} %}
         {% for status, count in status_dist %}
+        {% set bar_color = colors.get(status, 'var(--indigo)') %}
         <div class="chart-bar-row">
           <div class="chart-bar-label">{{ status|title }}</div>
           <div class="chart-bar-track">
-            <div class="chart-bar-fill" data-width="{{ ((count / total.n) * 100)|round }}%" style="background:{{ colors.get(status, 'var(--indigo)') }};"></div>
+            <div class="chart-bar-fill" data-width="{{ ((count / total.n) * 100)|round }}%" style="background:{{ bar_color }};"></div>
           </div>
           <div class="chart-bar-value">{{ count }}</div>
         </div>
