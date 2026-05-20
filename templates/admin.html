@@ -25,25 +25,48 @@
     </div>
   </div>
 
+  <!-- API Key Status -->
+  <div class="card" style="margin-bottom:20px;border-color:{% if api_key_set %}rgba(0,245,170,0.2){% else %}rgba(255,180,0,0.2){% endif %};">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="font-size:24px;">{% if api_key_set %}🔑{% else %}⚠️{% endif %}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700;margin-bottom:3px;">JSearch API Key — {% if api_key_set %}<span style="color:var(--mint);">Configured ✓</span>{% else %}<span style="color:#ffb400;">Not Set</span>{% endif %}</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">
+          {% if api_key_set %}
+            Environment variable <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;">JSEARCH_API_KEY</code> is set. Scrapers will fetch real jobs.
+          {% else %}
+            Set <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;">JSEARCH_API_KEY</code> as an environment variable to enable real job fetching.
+            Get a free key at <a href="https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch" target="_blank" style="color:var(--mint);">RapidAPI →</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scraper Control -->
   <div class="card" style="margin-bottom:20px;">
     <div class="section-header">
       <div>
-        <div class="section-title">Scraper Control</div>
-        <div class="section-sub">Trigger scraping runs for each source</div>
+        <div class="section-title">JSearch Scraper Profiles</div>
+        <div class="section-sub">Each profile runs a targeted real-job search via the JSearch API (Indeed + LinkedIn + more)</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px;">
-      {% for source in ['TechJobs NG', 'Jobberman', 'LinkedIn Demo', 'Indeed Demo'] %}
-      <div class="scraper-source">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="source-dot green"></div>
-          <div>
-            <div style="font-weight:600;font-size:0.875rem;">{{ source }}</div>
-            <div style="font-size:0.72rem;color:var(--text-muted);">Demo scraper</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px;">
+      {% for profile in scraper_profiles %}
+      <div class="scraper-source" style="flex-direction:column;align-items:flex-start;gap:10px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="source-dot {% if api_key_set %}green{% else %}idle{% endif %}"></div>
+            <div style="font-weight:700;font-size:0.9rem;">{{ profile.name }}</div>
           </div>
+          <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ profile.name }}" {% if not api_key_set %}title="Set JSEARCH_API_KEY first"{% endif %}>▶ Run</button>
         </div>
-        <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ source }}">▶ Run</button>
+        <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
+          <div>🔍 <em>{{ profile.query }}</em></div>
+          {% if profile.location %}<div>📍 {{ profile.location }}</div>{% endif %}
+          {% if profile.get('remote_only') %}<div>🌐 Remote only</div>{% endif %}
+          <div>📄 {{ profile.num_pages }} page(s) · {{ profile.date_posted }}</div>
+        </div>
       </div>
       {% endfor %}
     </div>
