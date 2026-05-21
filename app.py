@@ -3,6 +3,7 @@ load_dotenv()  # Load environment variables from .env file if present
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_migrate import Migrate
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,15 +17,16 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'jobwave-secret-2024')
 # ─── Database config ────────────────────────────────────────────────────────────
 # Render provides DATABASE_URL starting with "postgres://" but SQLAlchemy
 # requires "postgresql://" — fix it automatically
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///jobwave.db')
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    raise Exception("DATABASE_URL not set")
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-with app.app_context():
-    db.create_all()
+migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = ''
@@ -612,6 +614,4 @@ def api_jobs():
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
