@@ -3,14 +3,14 @@
 {% block page_title %}Job Detail{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+<div class="job-detail-grid">
 
   <!-- Left: Job detail -->
-  <div>
+  <div class="job-detail-main">
     <div class="job-detail-header">
-      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
-        <div class="company-logo" style="width:56px;height:56px;font-size:20px;">{{ job.company[0] }}</div>
-        <div style="flex:1;">
+      <div class="job-detail-top">
+        <div class="company-logo job-detail-logo">{{ job.company[0] }}</div>
+        <div style="flex:1;min-width:0;">
           <h2 style="margin-bottom:4px;">{{ job.title }}</h2>
           <div style="font-size:0.95rem;color:var(--text-dim);margin-bottom:12px;">{{ job.company }}</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -20,23 +20,22 @@
             {% if job.salary_min %}<span class="badge badge-mint">💰 ${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</span>{% endif %}
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="save-btn btn btn-outline btn-sm {% if is_saved %}saved{% endif %}" data-job-id="{{ job.id }}" style="font-size:0.875rem;">
-            {{ '♥ Saved' if is_saved else '♡ Save' }}
-          </button>
-          {% if application %}
-          <span class="badge badge-green" style="padding:8px 14px;">✓ Tracking</span>
-          {% else %}
-          <button class="btn btn-primary btn-sm track-apply-btn" data-job-id="{{ job.id }}">Track Application</button>
-          {% endif %}
-          {% if job.source_url %}
-          <a href="{{ job.source_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-mint btn-sm">Apply on {{ job.source }} →</a>
-          {% endif %}
-        </div>
+      </div>
+      <div class="job-detail-actions">
+        <button class="save-btn btn btn-outline btn-sm {% if is_saved %}saved{% endif %}" data-job-id="{{ job.id }}">
+          {{ '♥ Saved' if is_saved else '♡ Save' }}
+        </button>
+        {% if application %}
+        <span class="badge badge-green" style="padding:8px 14px;">✓ Tracking</span>
+        {% else %}
+        <button class="btn btn-primary btn-sm track-apply-btn" data-job-id="{{ job.id }}">Track Application</button>
+        {% endif %}
+        {% if job.source_url %}
+        <a href="{{ job.source_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-mint btn-sm">Apply on {{ job.source }} →</a>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Application status -->
     {% if application %}
     <div class="card" style="margin-bottom:20px;">
       <div style="font-weight:700;margin-bottom:12px;">📋 Your Application</div>
@@ -52,13 +51,11 @@
     </div>
     {% endif %}
 
-    <!-- Description -->
     <div class="card" style="margin-bottom:20px;">
       <h3 style="margin-bottom:14px;">About This Role</h3>
       <div style="color:var(--text-dim);line-height:1.75;font-size:0.9rem;white-space:pre-line;">{{ job.description or 'No description provided.' }}</div>
     </div>
 
-    <!-- Requirements -->
     {% if job.requirements %}
     <div class="card" style="margin-bottom:20px;">
       <h3 style="margin-bottom:14px;">Requirements</h3>
@@ -70,7 +67,6 @@
     </div>
     {% endif %}
 
-    <!-- Tags -->
     {% if job.tags %}
     <div class="card">
       <h3 style="margin-bottom:12px;">Skills & Keywords</h3>
@@ -84,49 +80,28 @@
   </div>
 
   <!-- Right: Sidebar -->
-  <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:80px;">
-
-    <!-- Job info -->
+  <div class="job-detail-side">
     <div class="card">
       <h3 style="margin-bottom:14px;">Job Details</h3>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:0.875rem;">
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Source</span>
-          <span>{{ job.source }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Source</span><span>{{ job.source }}</span></div>
         <div class="divider" style="margin:0;"></div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Type</span>
-          <span>{{ (job.job_type or 'full-time')|title }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Type</span><span>{{ (job.job_type or 'full-time')|title }}</span></div>
         <div class="divider" style="margin:0;"></div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Level</span>
-          <span>{{ (job.experience or 'N/A')|title }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Level</span><span>{{ (job.experience or 'N/A')|title }}</span></div>
         {% if job.salary_min %}
         <div class="divider" style="margin:0;"></div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Salary</span>
-          <span style="color:var(--mint);font-weight:700;">${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Salary</span><span style="color:var(--mint);font-weight:700;">${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</span></div>
         {% endif %}
         <div class="divider" style="margin:0;"></div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Posted</span>
-          <span>{{ job.posted_at.strftime('%b %d, %Y') if job.posted_at else 'N/A' }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Posted</span><span>{{ job.posted_at.strftime('%b %d, %Y') if job.posted_at else 'N/A' }}</span></div>
         <div class="divider" style="margin:0;"></div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="color:var(--text-muted);">Views</span>
-          <span>{{ job.views }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Views</span><span>{{ job.views }}</span></div>
       </div>
     </div>
 
-    <!-- Similar jobs -->
     {% if similar %}
-    <div class="card">
+    <div class="card" style="margin-top:16px;">
       <h3 style="margin-bottom:12px;">Similar Jobs</h3>
       <div style="display:flex;flex-direction:column;gap:10px;">
         {% for s in similar %}
@@ -141,7 +116,7 @@
       </div>
     </div>
     {% endif %}
-
   </div>
+
 </div>
 {% endblock %}

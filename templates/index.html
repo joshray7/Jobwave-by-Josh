@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block title %}Find Your Next Job{% endblock %}
 
 {% block public_content %}
@@ -9,7 +8,7 @@
       <div class="logo-mark">JW</div>
       <div class="logo-text">Job<span>Wave</span></div>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div style="display:flex;gap:8px;">
       <a href="{{ url_for('login') }}" class="btn btn-ghost">Sign In</a>
       <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started →</a>
     </div>
@@ -26,13 +25,11 @@
         <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">Sign In</a>
       </div>
 
-      <!-- Live job previews -->
-      <div style="margin-top:48px;display:flex;flex-direction:column;gap:10px;max-width:480px;margin-left:auto;margin-right:auto;">
+      <!-- Job previews -->
+      <div class="hero-job-list">
         {% for job in recent %}
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:12px;text-align:left;">
-          <div style="width:36px;height:36px;border-radius:8px;background:var(--indigo-dim);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--mint);flex-shrink:0;">
-            {{ job.company[0] }}
-          </div>
+        <div class="hero-job-item">
+          <div class="hero-job-logo">{{ job.company[0] }}</div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ job.title }}</div>
             <div style="font-size:0.75rem;color:var(--text-muted);">{{ job.company }} · {{ job.location }}</div>
@@ -63,32 +60,32 @@
     <div class="feature-card">
       <div class="feature-icon">🔍</div>
       <h3>Smart Search</h3>
-      <p>Filter by keyword, location, salary, experience, or job type. Find exactly what you're looking for.</p>
+      <p>Filter by keyword, location, salary, experience, or job type.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">📋</div>
       <h3>Application Tracker</h3>
-      <p>Track every application from applied → interview → offer. Never lose track of opportunities.</p>
+      <p>Track every application from applied → interview → offer.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔔</div>
       <h3>Job Alerts</h3>
-      <p>Set keyword alerts and get notified daily or weekly when matching jobs are posted.</p>
+      <p>Get notified daily or weekly when matching jobs are posted.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">📊</div>
       <h3>Analytics</h3>
-      <p>Visualize your job search progress, interview rates, and market trends.</p>
+      <p>Visualize your job search progress and market trends.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">↓</div>
       <h3>Export Data</h3>
-      <p>Export your saved jobs or applications as CSV or JSON for offline analysis.</p>
+      <p>Export saved jobs or applications as CSV or JSON.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
       <h3>Live Scraping</h3>
-      <p>Modular scrapers fetch listings from multiple sources with duplicate detection and caching.</p>
+      <p>Real jobs from Indeed, LinkedIn and more via JSearch API.</p>
     </div>
   </section>
 </div>
