@@ -1016,7 +1016,7 @@ tr:hover td { background: var(--indigo-dim); }
 /* hide-mobile utility */
 .hide-mobile {
   display: block;
-  
+
 }
 
 /* ── Mobile overrides for new layouts ── */
@@ -1047,6 +1047,7 @@ tr:hover td { background: var(--indigo-dim); }
   /* chart bar labels shorter */
   .chart-bar-label { width: 70px; font-size: 0.72rem; }
   .chart-bar-value { width: 36px; font-size: 0.78rem; }
+  .form-control { font-size: 0.85rem; padding: 8px 12px; }
 }
 
 @media (max-width: 480px) {
@@ -1072,4 +1073,6 @@ tr:hover td { background: var(--indigo-dim); }
   /* Job row card */
   .job-row-card { padding: 12px !important; }
   .company-logo { width: 34px !important; height: 34px !important; }
+
+  .form-control { padding: 8px 12px; font-size: 0.85rem; }
 }
