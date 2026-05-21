@@ -25,30 +25,27 @@
     </div>
   </div>
 
-  <!-- API Key Status -->
-
-
   <!-- Scraper Control -->
   <div class="card" style="margin-bottom:20px;">
     <div class="section-header">
       <div>
         <div class="section-title">JSearch Scraper Profiles</div>
-        <div class="section-sub">Each profile runs a targeted real-job search via the JSearch API (Indeed + LinkedIn + more)</div>
+        <div class="section-sub">Fetches real jobs from Indeed, LinkedIn & more</div>
       </div>
       <button class="btn btn-danger btn-sm" id="clear-fake-btn">🗑 Clear Fake Jobs</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px;">
+    <div class="scraper-profiles-grid">
       {% for profile in scraper_profiles %}
-      <div class="scraper-source" style="flex-direction:column;align-items:flex-start;gap:10px;padding:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div class="source-dot {% if api_key_set %}green{% else %}idle{% endif %}"></div>
-            <div style="font-weight:700;font-size:0.9rem;">{{ profile.name }}</div>
+      <div class="scraper-source">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="source-dot green"></div>
+            <div style="font-weight:700;font-size:0.875rem;">{{ profile.name }}</div>
           </div>
-          <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ profile.name }}" {% if not api_key_set %}title="Set JSEARCH_API_KEY first"{% endif %}>▶ Run</button>
+          <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ profile.name }}">▶ Run</button>
         </div>
-        <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
-          <div>🔍 <em>{{ profile.query }}</em></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.6;">
+          <div>🔍 {{ profile.query }}</div>
           {% if profile.location %}<div>📍 {{ profile.location }}</div>{% endif %}
           {% if profile.get('remote_only') %}<div>🌐 Remote only</div>{% endif %}
           <div>📄 {{ profile.num_pages }} page(s) · {{ profile.date_posted }}</div>
@@ -68,7 +65,13 @@
     <div class="table-wrap" style="margin-top:12px;">
       <table>
         <thead>
-          <tr><th>Source</th><th>Status</th><th>Found</th><th>Added</th><th>Started</th><th>Message</th></tr>
+          <tr>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Added</th>
+            <th>Started</th>
+            <th class="hide-mobile">Message</th>
+          </tr>
         </thead>
         <tbody>
           {% for log in logs %}
@@ -79,17 +82,19 @@
                 {{ log.status }}
               </span>
             </td>
-            <td>{{ log.jobs_found }}</td>
             <td style="color:var(--mint);font-weight:600;">+{{ log.jobs_added }}</td>
             <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.started_at.strftime('%b %d, %H:%M') }}</td>
-            <td style="font-size:0.78rem;color:var(--text-muted);">{{ log.message or '—' }}</td>
+            <td class="hide-mobile" style="font-size:0.78rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.message or '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="empty-state" style="padding:30px 0;"><div>No scraper runs yet. Click Run on a source above.</div></div>
+    <div class="empty-state" style="padding:30px 0;">
+      <div class="empty-icon">📋</div>
+      <div>No scraper runs yet. Click Run on a profile above.</div>
+    </div>
     {% endif %}
   </div>
 
@@ -102,13 +107,20 @@
     <div class="table-wrap" style="margin-top:12px;">
       <table>
         <thead>
-          <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+          <tr>
+            <th>Name</th>
+            <th class="hide-mobile">Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th class="hide-mobile">Joined</th>
+            <th>Action</th>
+          </tr>
         </thead>
         <tbody>
           {% for user in users %}
           <tr>
             <td style="font-weight:600;">{{ user.name }}</td>
-            <td style="color:var(--text-muted);">{{ user.email }}</td>
+            <td class="hide-mobile" style="color:var(--text-muted);font-size:0.82rem;">{{ user.email }}</td>
             <td>
               <span class="badge {% if user.role == 'admin' %}badge-mint{% else %}badge-gray{% endif %}">{{ user.role }}</span>
             </td>
@@ -117,7 +129,7 @@
                 {{ 'Active' if user.is_active else 'Inactive' }}
               </span>
             </td>
-            <td style="color:var(--text-muted);font-size:0.8rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+            <td class="hide-mobile" style="color:var(--text-muted);font-size:0.8rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
             <td>
               {% if user.id != current_user.id %}
               <button class="btn btn-outline btn-sm toggle-user-btn" data-user-id="{{ user.id }}">
