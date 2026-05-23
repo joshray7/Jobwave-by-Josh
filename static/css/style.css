@@ -3,17 +3,17 @@
 /* ── NeonTide Design System ─────────────────────────────────────────────────── */
 :root {
   --indigo: #3b00ff;
-  --mint: #00f5aa;
-  --indigo-dim: rgba(59,0,255,0.15);
-  --mint-dim: rgba(0,245,170,0.12);
-  --indigo-glow: rgba(59,0,255,0.35);
-  --mint-glow: rgba(0,245,170,0.35);
+  --mint: #00c88a;
+  --indigo-dim: rgba(59,0,255,0.1);
+  --mint-dim: rgba(0,200,138,0.1);
+  --indigo-glow: rgba(59,0,255,0.3);
+  --mint-glow: rgba(0,200,138,0.3);
   --bg: #050510;
   --bg2: #080818;
   --surface: #0d0d24;
   --surface2: #12122e;
   --border: rgba(59,0,255,0.2);
-  --border-mint: rgba(0,245,170,0.15);
+  --border-mint: rgba(0,200,138,0.15);
   --text: #e8e8ff;
   --text-dim: #7878aa;
   --text-muted: #4a4a6a;
@@ -23,6 +23,70 @@
   --font: 'Space Grotesk', sans-serif;
   --transition: 0.2s ease;
 }
+
+/* ── Light Mode ── */
+[data-theme="light"] {
+  --indigo: #3b00ff;
+  --mint: #00a572;
+  --indigo-dim: rgba(59,0,255,0.08);
+  --mint-dim: rgba(0,165,114,0.08);
+  --indigo-glow: rgba(59,0,255,0.2);
+  --mint-glow: rgba(0,165,114,0.2);
+  --bg: #f0f0f8;
+  --bg2: #e8e8f4;
+  --surface: #ffffff;
+  --surface2: #f4f4fc;
+  --border: rgba(59,0,255,0.15);
+  --border-mint: rgba(0,165,114,0.15);
+  --text: #0a0a1a;
+  --text-dim: #3a3a5c;
+  --text-muted: #8888aa;
+}
+
+[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(59,0,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,165,114,0.03) 0%, transparent 60%);
+}
+
+[data-theme="light"] .topbar {
+  background: rgba(240,240,248,0.9);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg2); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--indigo); }
+
+[data-theme="light"] .job-card:hover,
+[data-theme="light"] .stat-card:hover { box-shadow: 0 4px 20px rgba(59,0,255,0.1); }
+
+[data-theme="light"] .tag {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.08);
+  color: var(--text-dim);
+}
+
+[data-theme="light"] .form-control {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+[data-theme="light"] .btn-ghost { color: var(--text-dim); }
+[data-theme="light"] .btn-ghost:hover { background: var(--indigo-dim); color: var(--text); }
+
+/* ── Theme toggle button ── */
+.theme-toggle {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--indigo-dim); color: var(--text); border-color: var(--indigo); }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1253,3 +1317,63 @@ tr:hover td { background: var(--indigo-dim); }
   .source-chips::-webkit-scrollbar { height: 3px; }
   .source-chips .filter-tab { white-space: nowrap; flex-shrink: 0; }
 }
+
+/* ── Auth fixes ── */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+.label-hint {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 480px) {
+  .auth-page { padding: 16px; align-items: flex-start; padding-top: 40px; }
+  .auth-card { padding: 24px 16px; }
+  .auth-title { font-size: 1.2rem; }
+}
+
+/* ── Profile Page ── */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.profile-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 80px; }
+.profile-main { display: flex; flex-direction: column; }
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--indigo), var(--mint));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 28px; color: #fff;
+  margin: 0 auto;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+@media (max-width: 768px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-side { position: static; }
+}
+
+/* ── Lucide Icon sizing ── */
+.nav-icon { display:flex; align-items:center; justify-content:center; width:18px; height:18px; flex-shrink:0; }
+.nav-icon svg { width:16px; height:16px; stroke-width:2; }
+.theme-toggle svg { width:16px; height:16px; stroke-width:2; }
+.btn-icon svg { width:16px; height:16px; stroke-width:2; }
+.sidebar-toggle svg { width:18px; height:18px; stroke-width:2; }

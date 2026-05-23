@@ -1,5 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file if present
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -54,12 +52,13 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(20), default='user')  # user | admin
+    role = db.Column(db.String(20), default='user')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     saved_jobs = db.relationship('SavedJob', backref='user', lazy=True, cascade='all, delete-orphan')
     applications = db.relationship('Application', backref='user', lazy=True, cascade='all, delete-orphan')
     alerts = db.relationship('Alert', backref='user', lazy=True, cascade='all, delete-orphan')
+    profile = db.relationship('UserProfile', backref='user', uselist=False, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -74,6 +73,28 @@ class User(db.Model):
     def is_anonymous(self): return False
 
     def get_id(self): return str(self.id)
+
+
+class UserProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    headline = db.Column(db.String(200))           # e.g. "Full Stack Developer"
+    location = db.Column(db.String(200))           # e.g. "Lagos, Nigeria"
+    experience_level = db.Column(db.String(50))    # entry | mid | senior | lead
+    target_role = db.Column(db.String(200))        # e.g. "Backend Engineer"
+    target_salary = db.Column(db.Integer)          # desired salary (yearly)
+    preferred_type = db.Column(db.String(50))      # full-time | remote | contract
+    skills = db.Column(db.Text)                    # comma-separated: "python,react,aws"
+    bio = db.Column(db.Text)
+    github = db.Column(db.String(200))
+    linkedin = db.Column(db.String(200))
+    portfolio = db.Column(db.String(200))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def skills_list(self):
+        if not self.skills:
+            return []
+        return [s.strip() for s in self.skills.split(',') if s.strip()]
 
 
 class Job(db.Model):
@@ -565,7 +586,135 @@ def analytics():
                            status_dist=status_dist)
 
 
-# ─── Scraper (run in thread) ────────────────────────────────────────────────────
+# ─── Profile ────────────────────────────────────────────────────────────────────
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    prof = current_user.profile
+    if not prof:
+        prof = UserProfile(user_id=current_user.id)
+        db.session.add(prof)
+        db.session.commit()
+
+    if request.method == 'POST':
+        # Basic info
+        current_user.name = request.form.get('name', current_user.name).strip()
+        prof.headline = request.form.get('headline', '').strip()
+        prof.location = request.form.get('location', '').strip()
+        prof.bio = request.form.get('bio', '').strip()
+        prof.experience_level = request.form.get('experience_level', '')
+        prof.target_role = request.form.get('target_role', '').strip()
+        prof.preferred_type = request.form.get('preferred_type', '')
+        target_salary = request.form.get('target_salary', '')
+        prof.target_salary = int(target_salary) if target_salary.isdigit() else None
+        # Skills — clean and deduplicate
+        raw_skills = request.form.get('skills', '')
+        skills = list(dict.fromkeys(
+            [s.strip().lower() for s in raw_skills.replace(';', ',').split(',') if s.strip()]
+        ))
+        prof.skills = ','.join(skills)
+        # Links
+        prof.github = request.form.get('github', '').strip()
+        prof.linkedin = request.form.get('linkedin', '').strip()
+        prof.portfolio = request.form.get('portfolio', '').strip()
+        prof.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Profile updated!', 'success')
+        return redirect(url_for('profile'))
+
+    return render_template('profile.html', prof=prof)
+
+
+# ─── AI Match Score ─────────────────────────────────────────────────────────────
+
+@app.route('/api/jobs/<int:job_id>/match', methods=['POST'])
+@login_required
+@limiter.limit('30 per hour')
+def get_match_score(job_id):
+    job = Job.query.get_or_404(job_id)
+    prof = current_user.profile
+
+    if not prof or not prof.skills:
+        return jsonify({'error': 'Complete your profile first to get match scores.'}), 400
+
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'AI scoring not configured.'}), 503
+
+    def compute_score():
+        import requests as req
+        profile_summary = f"""
+Name: {current_user.name}
+Target Role: {prof.target_role or 'Not specified'}
+Experience Level: {prof.experience_level or 'Not specified'}
+Skills: {prof.skills or 'Not specified'}
+Preferred Job Type: {prof.preferred_type or 'Any'}
+Location: {prof.location or 'Not specified'}
+        """.strip()
+
+        job_summary = f"""
+Title: {job.title}
+Company: {job.company}
+Location: {job.location}
+Type: {job.job_type}
+Experience Required: {job.experience}
+Tags/Skills: {job.tags}
+Description (excerpt): {(job.description or '')[:600]}
+        """.strip()
+
+        prompt = f"""You are a job matching assistant. Given a candidate profile and a job listing, score how well the candidate matches the job.
+
+CANDIDATE PROFILE:
+{profile_summary}
+
+JOB LISTING:
+{job_summary}
+
+Respond with ONLY a JSON object in this exact format, nothing else:
+{{
+  "score": <integer 0-100>,
+  "level": "<Poor|Fair|Good|Strong|Excellent>",
+  "summary": "<one sentence explaining the match>",
+  "matching_skills": ["skill1", "skill2"],
+  "missing_skills": ["skill1", "skill2"]
+}}"""
+
+        response = req.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'x-api-key': api_key,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            json={
+                'model': 'claude-haiku-4-5-20251001',
+                'max_tokens': 500,
+                'messages': [{'role': 'user', 'content': prompt}]
+            },
+            timeout=15
+        )
+        if not response.ok:
+            app.logger.error(f"Anthropic API error body: {response.text}")
+        response.raise_for_status()
+        data = response.json()
+        text = data['content'][0]['text'].strip()
+        # Strip markdown fences if present
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        return json.loads(text.strip())
+
+    try:
+        result = compute_score()
+        return jsonify({'success': True, **result})
+    except Exception as e:
+        app.logger.error(f"Match score error: {e}")
+        return jsonify({'error': f'Scoring failed: {str(e)}'}), 500
+
+
+
 
 def run_scraper_task(profile_name, app_context):
     with app_context:

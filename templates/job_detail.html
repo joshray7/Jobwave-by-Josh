@@ -34,6 +34,10 @@
         <a href="{{ job.source_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-mint btn-sm">Apply on {{ job.source }} →</a>
         {% endif %}
       </div>
+
+      <!-- AI Match Score Result -->
+      <div id="match-result" style="display:none;" class="card" style="margin-top:16px;border-color:rgba(0,245,170,0.2);">
+      </div>
     </div>
 
     {% if application %}
@@ -119,4 +123,67 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const matchBtn = document.getElementById('match-btn');
+const matchResult = document.getElementById('match-result');
+
+const scoreColors = {
+  'Poor': '#ff5555', 'Fair': '#ffb400',
+  'Good': '#8888ff', 'Strong': '#00c864', 'Excellent': '#00f5aa',
+};
+
+matchBtn?.addEventListener('click', async () => {
+  const jobId = matchBtn.dataset.jobId;
+  matchBtn.disabled = true;
+  matchBtn.innerHTML = '<span class="spinner"></span> Analyzing…';
+  matchResult.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/match`, { method: 'POST' });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast(data.error, 'error');
+      matchBtn.disabled = false;
+      matchBtn.textContent = '✦ Check Match';
+      return;
+    }
+
+    const color = scoreColors[data.level] || '#8888ff';
+    const matchSkills = (data.matching_skills || []).map(s =>
+      `<span class="tag" style="background:rgba(0,245,170,0.08);border-color:rgba(0,245,170,0.2);color:var(--mint);">${s}</span>`
+    ).join('');
+    const missSkills = (data.missing_skills || []).map(s =>
+      `<span class="tag" style="background:rgba(255,60,60,0.06);border-color:rgba(255,60,60,0.15);color:#ff7777;">${s}</span>`
+    ).join('');
+
+    matchResult.style.display = 'block';
+    matchResult.style.borderColor = color + '33';
+    matchResult.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="text-align:center;flex-shrink:0;">
+          <div style="font-size:2.2rem;font-weight:800;color:${color};line-height:1;">${data.score}%</div>
+          <div style="font-size:0.75rem;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.05em;">${data.level} Match</div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:0.875rem;color:var(--text-dim);margin-bottom:10px;">${data.summary}</div>
+          ${matchSkills ? `<div style="margin-bottom:8px;"><span style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px;">✓ Matching skills</span><div class="job-tags">${matchSkills}</div></div>` : ''}
+          ${missSkills ? `<div><span style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px;">✗ Missing skills</span><div class="job-tags">${missSkills}</div></div>` : ''}
+        </div>
+      </div>
+    `;
+    matchBtn.innerHTML = `✦ ${data.score}% Match`;
+    matchBtn.style.color = color;
+    matchBtn.style.borderColor = color + '44';
+    matchBtn.disabled = false;
+  } catch {
+    showToast('Match scoring failed', 'error');
+    matchBtn.disabled = false;
+    matchBtn.textContent = '✦ Check Match';
+  }
+});
+</script>
 {% endblock %}

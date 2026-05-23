@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}JobWave{% endblock %} — JobWave</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    const t = localStorage.getItem('jw-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  </script>
   <style>
     .sidebar-overlay {
       display: none; position: fixed; inset: 0;
@@ -29,39 +34,42 @@
     <nav class="sidebar-nav">
       <span class="nav-section-label">Main</span>
       <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-        <span class="nav-icon">⊞</span> Dashboard
+        <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span> Dashboard
       </a>
       <a href="{{ url_for('jobs') }}" class="nav-link {% if request.endpoint in ['jobs','job_detail'] %}active{% endif %}">
-        <span class="nav-icon">🔍</span> Browse Jobs
+        <span class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span> Browse Jobs
       </a>
       <a href="{{ url_for('saved_jobs') }}" class="nav-link {% if request.endpoint == 'saved_jobs' %}active{% endif %}">
-        <span class="nav-icon">♥</span> Saved Jobs
+        <span class="nav-icon"><i class="fa-solid fa-heart"></i></span> Saved Jobs
       </a>
 
       <span class="nav-section-label">Tracking</span>
       <a href="{{ url_for('applications') }}" class="nav-link {% if request.endpoint == 'applications' %}active{% endif %}">
-        <span class="nav-icon">📋</span> Applications
+        <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> Applications
       </a>
       <a href="{{ url_for('alerts') }}" class="nav-link {% if request.endpoint == 'alerts' %}active{% endif %}">
-        <span class="nav-icon">🔔</span> Alerts
+        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span> Alerts
       </a>
       <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
-        <span class="nav-icon">📊</span> Analytics
+        <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span> Analytics
       </a>
 
       {% if current_user.role == 'admin' %}
       <span class="nav-section-label">Admin</span>
       <a href="{{ url_for('admin') }}" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
-        <span class="nav-icon">⚙</span> Admin Panel
+        <span class="nav-icon"><i class="fa-solid fa-gear"></i></span> Admin Panel
       </a>
       {% endif %}
 
       <span class="nav-section-label">Account</span>
+      <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-user"></i></span> My Profile
+      </a>
       <a href="{{ url_for('export_jobs') }}" class="nav-link">
-        <span class="nav-icon">↓</span> Export Data
+        <span class="nav-icon"><i class="fa-solid fa-download"></i></span> Export Data
       </a>
       <a href="{{ url_for('logout') }}" class="nav-link">
-        <span class="nav-icon">⏻</span> Sign Out
+        <span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span> Sign Out
       </a>
     </nav>
 
@@ -80,12 +88,17 @@
   <main class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn btn-ghost btn-icon sidebar-toggle" aria-label="Menu">☰</button>
+        <button class="btn btn-ghost btn-icon sidebar-toggle" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <div class="topbar-title">
           <h1>{% block page_title %}Dashboard{% endblock %}</h1>
         </div>
       </div>
       <div class="topbar-actions">
+        <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
         {% block topbar_actions %}
         <a href="{{ url_for('jobs') }}" class="btn btn-primary btn-sm">+ Find Jobs</a>
         {% endblock %}
@@ -114,6 +127,27 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+// ── Theme Toggle ──────────────────────────────────────────────────────────────
+const html = document.documentElement;
+const toggleBtn = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+function applyTheme(theme) {
+  html.setAttribute('data-theme', theme);
+  localStorage.setItem('jw-theme', theme);
+  if (themeIcon) {
+    themeIcon.className = theme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+  }
+}
+
+applyTheme(localStorage.getItem('jw-theme') || 'dark');
+
+toggleBtn?.addEventListener('click', () => {
+  const current = html.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

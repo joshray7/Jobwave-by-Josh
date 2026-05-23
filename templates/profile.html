@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block topbar_actions %}
+<button form="profile-form" type="submit" class="btn btn-mint btn-sm">Save Changes</button>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for category, msg in messages %}
+  <div class="flash {{ category }}">{{ msg }}</div>
+  {% endfor %}{% endif %}
+{% endwith %}
+
+<form method="POST" id="profile-form">
+  <div class="profile-grid">
+
+    <!-- Left: Avatar + links -->
+    <div class="profile-side">
+
+      <!-- Avatar card -->
+      <div class="card" style="text-align:center;padding:28px 20px;">
+        <div class="profile-avatar">{{ current_user.name[0].upper() }}</div>
+        <div style="font-weight:700;font-size:1.1rem;margin-top:12px;">{{ current_user.name }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">{{ current_user.email }}</div>
+        {% if prof.headline %}
+        <div style="font-size:0.85rem;color:var(--mint);margin-top:6px;">{{ prof.headline }}</div>
+        {% endif %}
+        {% if prof.location %}
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">📍 {{ prof.location }}</div>
+        {% endif %}
+        {% if prof.updated_at %}
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:10px;">Updated {{ prof.updated_at.strftime('%b %d, %Y') }}</div>
+        {% endif %}
+      </div>
+
+      <!-- Profile completeness -->
+      <div class="card">
+        <div style="font-weight:700;font-size:0.875rem;margin-bottom:12px;">Profile Strength</div>
+        {% set fields = [prof.headline, prof.skills, prof.target_role, prof.experience_level, prof.location, prof.bio] %}
+        {% set filled = fields | select | list | length %}
+        {% set pct = ((filled / fields|length) * 100)|round|int %}
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px;">
+          <span style="color:var(--text-muted);">{{ filled }}/{{ fields|length }} fields</span>
+          <span style="color:var(--mint);font-weight:700;">{{ pct }}%</span>
+        </div>
+        <div class="progress">
+          <div class="progress-fill" data-width="{{ pct }}%"></div>
+        </div>
+        {% if pct < 100 %}
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">Complete your profile to get better AI match scores.</div>
+        {% else %}
+        <div style="font-size:0.75rem;color:var(--mint);margin-top:8px;">✓ Profile complete!</div>
+        {% endif %}
+      </div>
+
+      <!-- Links -->
+      <div class="card">
+        <div style="font-weight:700;font-size:0.875rem;margin-bottom:14px;">Links</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">GitHub</label>
+            <input type="url" name="github" class="form-control" placeholder="https://github.com/username" value="{{ prof.github or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">LinkedIn</label>
+            <input type="url" name="linkedin" class="form-control" placeholder="https://linkedin.com/in/username" value="{{ prof.linkedin or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Portfolio</label>
+            <input type="url" name="portfolio" class="form-control" placeholder="https://yoursite.com" value="{{ prof.portfolio or '' }}">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Main form -->
+    <div class="profile-main">
+
+      <!-- Basic info -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:16px;">Basic Information</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="name" class="form-control" value="{{ current_user.name }}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Professional Headline</label>
+              <input type="text" name="headline" class="form-control" placeholder="e.g. Full Stack Developer" value="{{ prof.headline or '' }}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Location</label>
+              <input type="text" name="location" class="form-control" placeholder="e.g. Lagos, Nigeria" value="{{ prof.location or '' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Experience Level</label>
+              <select name="experience_level" class="form-control">
+                <option value="">Select level</option>
+                {% for e in ['entry','mid','senior','lead'] %}
+                <option value="{{ e }}" {% if prof.experience_level == e %}selected{% endif %}>{{ e|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea name="bio" class="form-control" rows="3" placeholder="A short description about yourself, your experience and what you're looking for…">{{ prof.bio or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job preferences -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:16px;">Job Preferences</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Target Role</label>
+              <input type="text" name="target_role" class="form-control" placeholder="e.g. Backend Engineer" value="{{ prof.target_role or '' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Preferred Job Type</label>
+              <select name="preferred_type" class="form-control">
+                <option value="">Any</option>
+                {% for t in ['full-time','part-time','remote','contract'] %}
+                <option value="{{ t }}" {% if prof.preferred_type == t %}selected{% endif %}>{{ t|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Salary <span class="label-hint">(yearly in USD)</span></label>
+            <input type="number" name="target_salary" class="form-control" placeholder="e.g. 80000" value="{{ prof.target_salary or '' }}" min="0" step="1000">
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:6px;">Skills</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">Enter skills separated by commas. These are used for AI job match scoring.</div>
+        <div class="form-group">
+          <textarea name="skills" class="form-control" rows="3" id="skills-input" placeholder="python, react, nodejs, postgresql, aws, docker…">{{ prof.skills or '' }}</textarea>
+        </div>
+        <!-- Skill tags preview -->
+        {% if prof.skills %}
+        <div class="job-tags" style="margin-top:10px;gap:6px;" id="skills-preview">
+          {% for skill in prof.skills_list() %}
+          <span class="tag" style="font-size:0.78rem;padding:3px 10px;">{{ skill }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live skills preview
+const skillsInput = document.getElementById('skills-input');
+const skillsPreview = document.getElementById('skills-preview') || (() => {
+  const el = document.createElement('div');
+  el.id = 'skills-preview';
+  el.className = 'job-tags';
+  el.style.cssText = 'margin-top:10px;gap:6px;';
+  skillsInput?.parentElement?.appendChild(el);
+  return el;
+})();
+
+skillsInput?.addEventListener('input', () => {
+  const skills = skillsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (skillsPreview) {
+    skillsPreview.innerHTML = skills.map(s =>
+      `<span class="tag" style="font-size:0.78rem;padding:3px 10px;">${s}</span>`
+    ).join('');
+  }
+});
+</script>
+{% endblock %}
