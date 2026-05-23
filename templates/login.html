@@ -27,8 +27,11 @@
         <label class="form-label">Password</label>
         <input type="password" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
       </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--text-dim);cursor:pointer;">
-        <input type="checkbox" name="remember" style="accent-color:var(--indigo);"> Keep me signed in
+      <label style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--text-dim);cursor:pointer;">
+          <input type="checkbox" name="remember" style="accent-color:var(--indigo);"> Keep me signed in
+        </span>
+        <a href="{{ url_for('forgot_password') }}" style="font-size:0.82rem;color:var(--text-muted);">Forgot password?</a>
       </label>
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;">Sign In →</button>
     </form>

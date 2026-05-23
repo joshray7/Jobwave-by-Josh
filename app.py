@@ -3,13 +3,16 @@ load_dotenv()  # Load environment variables from .env file if present
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_migrate import Migrate
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import os, json, csv, io, threading, time
 from functools import wraps
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'jobwave-secret-2024')
@@ -17,16 +20,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'jobwave-secret-2024')
 # ─── Database config ────────────────────────────────────────────────────────────
 # Render provides DATABASE_URL starting with "postgres://" but SQLAlchemy
 # requires "postgresql://" — fix it automatically
-database_url = os.environ.get('DATABASE_URL')
-if not database_url:
-    raise Exception("DATABASE_URL not set")
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///jobwave.db')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = ''
@@ -193,6 +193,14 @@ def register():
             db.session.add(user)
             db.session.commit()
             login_user(user)
+            # Send welcome email in background
+            try:
+                from mailer import send_welcome
+                t = threading.Thread(target=send_welcome, args=(user.email, user.name))
+                t.daemon = True
+                t.start()
+            except Exception:
+                pass
             flash(f'Welcome aboard, {name}!', 'success')
             return redirect(url_for('dashboard'))
     return render_template('register.html')
@@ -222,7 +230,71 @@ def logout():
     return redirect(url_for('index'))
 
 
-# ─── Dashboard ─────────────────────────────────────────────────────────────────
+# ─── Password Reset ─────────────────────────────────────────────────────────────
+
+def get_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit('5 per hour', methods=['POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        # Always show success to prevent email enumeration
+        if user:
+            try:
+                from mailer import send_password_reset
+                token = get_serializer().dumps(email, salt='password-reset')
+                reset_url = url_for('reset_password', token=token, _external=True)
+                t = threading.Thread(target=send_password_reset,
+                                     args=(user.email, reset_url, user.name))
+                t.daemon = True
+                t.start()
+            except Exception as e:
+                app.logger.error(f"Password reset email failed: {e}")
+        flash('If that email is registered, you will receive a reset link shortly.', 'info')
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    try:
+        email = get_serializer().loads(token, salt='password-reset', max_age=3600)
+    except SignatureExpired:
+        flash('This reset link has expired. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+    except BadSignature:
+        flash('Invalid reset link. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('User not found.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm', '')
+        if len(password) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+        elif password != confirm:
+            flash('Passwords do not match.', 'error')
+        else:
+            user.set_password(password)
+            db.session.commit()
+            flash('Password reset successfully! You can now sign in.', 'success')
+            return redirect(url_for('login'))
+    return render_template('reset_password.html', token=token)
+
+
+
 
 @app.route('/dashboard')
 @login_required
@@ -614,4 +686,8 @@ def api_jobs():
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    from scheduler import init_scheduler
+    init_scheduler(app)
     app.run(debug=True)

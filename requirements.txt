@@ -9,3 +9,6 @@ beautifulsoup4
 gunicorn
 python-dotenv
 psycopg2-binary
+resend
+apscheduler
+itsdangerous

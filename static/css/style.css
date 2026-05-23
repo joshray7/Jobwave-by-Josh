@@ -1014,7 +1014,7 @@ tr:hover td { background: var(--indigo-dim); }
 .scraper-source:hover { border-color: var(--indigo); }
 
 /* hide-mobile utility */
-.hide-mobile {}
+.hide-mobile { display: table-cell; }
 
 /* ── Mobile overrides for new layouts ── */
 @media (max-width: 768px) {
