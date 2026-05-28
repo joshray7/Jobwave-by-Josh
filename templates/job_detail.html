@@ -57,7 +57,7 @@
 
     <div class="card" style="margin-bottom:20px;">
       <h3 style="margin-bottom:14px;">About This Role</h3>
-      <div style="color:var(--text-dim);line-height:1.75;font-size:0.9rem;white-space:pre-line;">{{ job.description or 'No description available.' }}</div>
+      <div style="color:var(--text-dim);line-height:1.75;font-size:0.9rem;white-space:pre-line;">{{ job.description | safe }}</div>
     </div>
 
     {% if job.requirements %}

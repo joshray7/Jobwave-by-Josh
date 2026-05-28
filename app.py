@@ -424,16 +424,43 @@ def jobs():
 @login_required
 def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
+
     job.views += 1
     db.session.commit()
-    job.description = job.description.replace('\n', '<br>') if job.description else ''
-    is_saved = SavedJob.query.filter_by(user_id=current_user.id, job_id=job_id).first() is not None
-    application = Application.query.filter_by(user_id=current_user.id, job_id=job_id).first()
-    similar = Job.query.filter(Job.id != job_id, Job.is_active == True,
-                               Job.title.ilike(f'%{job.title.split()[0]}%')).limit(4).all()
-    return render_template('job_detail.html', job=job, is_saved=is_saved,
-                           application=application, similar=similar)
 
+    if job.description:
+        soup = BeautifulSoup(job.description, "html.parser")
+
+        for tag in soup.find_all(True):
+            tag.attrs = {}
+
+        job.description = str(soup)
+    else:
+        job.description = ""
+
+    is_saved = SavedJob.query.filter_by(
+        user_id=current_user.id,
+        job_id=job_id
+    ).first() is not None
+
+    application = Application.query.filter_by(
+        user_id=current_user.id,
+        job_id=job_id
+    ).first()
+
+    similar = Job.query.filter(
+        Job.id != job_id,
+        Job.is_active == True,
+        Job.title.ilike(f'%{job.title.split()[0]}%')
+    ).limit(4).all()
+
+    return render_template(
+        'job_detail.html',
+        job=job,
+        is_saved=is_saved,
+        application=application,
+        similar=similar
+    )
 
 # ─── Saved Jobs ────────────────────────────────────────────────────────────────
 
