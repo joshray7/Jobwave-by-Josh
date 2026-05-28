@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import os, json, csv, io, threading, time
 from functools import wraps
+from flask_migrate import Migrate
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = ''
+migrate = Migrate(app, db)
 
 # ─── Rate Limiter ───────────────────────────────────────────────────────────────
 limiter = Limiter(
@@ -815,97 +817,7 @@ def list_collections():
     cols = Collection.query.filter_by(user_id=current_user.id).all()
     return jsonify([{'id': c.id, 'name': c.name, 'color': c.color} for c in cols])
 
-
-# ─── AI Match Score ─────────────────────────────────────────────────────────────
-
-@app.route('/api/jobs/<int:job_id>/match', methods=['POST'])
-@login_required
-def get_match_score(job_id):
-    return jsonify({'error': 'AI Match Scoring is coming soon. Stay tuned!'}), 503
-    job = Job.query.get_or_404(job_id)
-    prof = current_user.profile
-
-    if not prof or not prof.skills:
-        return jsonify({'error': 'Complete your profile first to get match scores.'}), 400
-
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
-    if not api_key:
-        return jsonify({'error': 'AI scoring not configured.'}), 503
-
-    def compute_score():
-        import requests as req
-        profile_summary = f"""
-Name: {current_user.name}
-Target Role: {prof.target_role or 'Not specified'}
-Experience Level: {prof.experience_level or 'Not specified'}
-Skills: {prof.skills or 'Not specified'}
-Preferred Job Type: {prof.preferred_type or 'Any'}
-Location: {prof.location or 'Not specified'}
-        """.strip()
-
-        job_summary = f"""
-Title: {job.title}
-Company: {job.company}
-Location: {job.location}
-Type: {job.job_type}
-Experience Required: {job.experience}
-Tags/Skills: {job.tags}
-Description (excerpt): {(job.description or '')[:600]}
-        """.strip()
-
-        prompt = f"""You are a job matching assistant. Given a candidate profile and a job listing, score how well the candidate matches the job.
-
-CANDIDATE PROFILE:
-{profile_summary}
-
-JOB LISTING:
-{job_summary}
-
-Respond with ONLY a JSON object in this exact format, nothing else:
-{{
-  "score": <integer 0-100>,
-  "level": "<Poor|Fair|Good|Strong|Excellent>",
-  "summary": "<one sentence explaining the match>",
-  "matching_skills": ["skill1", "skill2"],
-  "missing_skills": ["skill1", "skill2"]
-}}"""
-
-        response = req.post(
-            'https://api.anthropic.com/v1/messages',
-            headers={
-                'x-api-key': api_key,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            json={
-                'model': 'claude-haiku-4-5-20251001',
-                'max_tokens': 500,
-                'messages': [{'role': 'user', 'content': prompt}]
-            },
-            timeout=15
-        )
-        if not response.ok:
-            app.logger.error(f"Anthropic API error body: {response.text}")
-        response.raise_for_status()
-        data = response.json()
-        text = data['content'][0]['text'].strip()
-        # Strip markdown fences if present
-        if text.startswith('```'):
-            text = text.split('```')[1]
-            if text.startswith('json'):
-                text = text[4:]
-        return json.loads(text.strip())
-
-    try:
-        result = compute_score()
-        return jsonify({'success': True, **result})
-    except Exception as e:
-        app.logger.error(f"Match score error: {e}")
-        return jsonify({'error': f'Scoring failed: {str(e)}'}), 500
-
-
-
-
+# ─── Scraper Task Runner ──────────────────────────────────────────────────────
 def run_scraper_task(profile_name, app_context):
     with app_context:
         log = ScraperLog(source=profile_name, status='running')
@@ -1254,3 +1166,5 @@ if __name__ == '__main__':
     from scheduler import init_scheduler
     init_scheduler(app)
     app.run(debug=True)
+
+
