@@ -1,98 +1,202 @@
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 {% extends 'base.html' %}
-{% block title %}Admin Panel{% endblock %}
-{% block page_title %}Admin Panel{% endblock %}
 
-{% block content %}
-{% extends 'base.html' %}
 {% block title %}Find Your Next Job{% endblock %}
 
 {% block public_content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 <div class="landing">
+
+  <!-- Navigation -->
   <nav class="landing-nav">
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="logo-mark">JW</div>
-      <div class="logo-text">Job<span>Wave</span></div>
+      <div class="logo-text">
+        Job<span>Wave</span>
+      </div>
     </div>
+
     <div style="display:flex;gap:8px;">
-      <a href="{{ url_for('login') }}" class="btn btn-ghost">Sign In</a>
-      <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started →</a>
+      <a href="{{ url_for('login') }}" class="btn btn-ghost">
+        Sign In
+      </a>
+
+      <a href="{{ url_for('register') }}" class="btn btn-primary">
+        Get Started →
+      </a>
     </div>
   </nav>
 
+  <!-- Hero -->
   <section class="hero">
+
     <div class="hero-glow"></div>
+
     <div class="hero-content">
-      <div class="hero-eyebrow">✦ Live job aggregator — updated daily</div>
-      <h1>Find Jobs <span class="gradient-text">Faster.</span><br>Track Smarter.</h1>
-      <p>JobWave pulls opportunities from dozens of sources into one searchable dashboard. Search, save, apply, and track — all in one place.</p>
+
+      <div class="hero-eyebrow">
+        ✦ Live job aggregator — updated daily
+      </div>
+
+      <h1>
+        Find Jobs
+        <span class="gradient-text">Faster.</span>
+        <br>
+        Track Smarter.
+      </h1>
+
+      <p>
+        JobWave pulls opportunities from dozens of sources into one searchable dashboard.
+        Search, save, apply, and track — all in one place.
+      </p>
+
       <div class="hero-actions">
-        <a href="{{ url_for('register') }}" class="btn btn-mint btn-lg">Start for Free →</a>
-        <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">Sign In</a>
+
+        <a href="{{ url_for('register') }}" class="btn btn-mint btn-lg">
+          Start for Free →
+        </a>
+
+        <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">
+          Sign In
+        </a>
+
       </div>
 
-      <!-- Job previews -->
+      <!-- Recent Jobs -->
       <div class="hero-job-list">
+
         {% for job in recent %}
+
         <div class="hero-job-item">
-          <div class="hero-job-logo">{{ job.company[0] }}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ job.title }}</div>
-            <div style="font-size:0.75rem;color:var(--text-muted);">{{ job.company }} · {{ job.location }}</div>
+
+          <div class="hero-job-logo">
+            {{ job.company[0] }}
           </div>
-          <span class="badge badge-mint" style="flex-shrink:0;">{{ job.job_type or 'full-time' }}</span>
+
+          <div style="flex:1;min-width:0;">
+
+            <div style="
+              font-weight:600;
+              font-size:0.875rem;
+              white-space:nowrap;
+              overflow:hidden;
+              text-overflow:ellipsis;
+            ">
+              {{ job.title }}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--text-muted);
+            ">
+              {{ job.company }} · {{ job.location }}
+            </div>
+
+          </div>
+
+          <span class="badge badge-mint" style="flex-shrink:0;">
+            {{ job.job_type or 'full-time' }}
+          </span>
+
         </div>
+
         {% endfor %}
+
       </div>
 
+      <!-- Stats -->
       <div class="hero-stats">
+
         <div>
-          <div class="hero-stat-value gradient-text">{{ stats.total_jobs }}+</div>
-          <div class="hero-stat-label">Active Listings</div>
+          <div class="hero-stat-value gradient-text">
+            {{ stats.total_jobs }}+
+          </div>
+
+          <div class="hero-stat-label">
+            Active Listings
+          </div>
         </div>
+
         <div>
-          <div class="hero-stat-value gradient-text">{{ stats.companies }}+</div>
-          <div class="hero-stat-label">Companies</div>
+          <div class="hero-stat-value gradient-text">
+            {{ stats.companies }}+
+          </div>
+
+          <div class="hero-stat-label">
+            Companies
+          </div>
         </div>
+
         <div>
-          <div class="hero-stat-value gradient-text">{{ stats.sources }}</div>
-          <div class="hero-stat-label">Sources</div>
+          <div class="hero-stat-value gradient-text">
+            {{ stats.sources }}
+          </div>
+
+          <div class="hero-stat-label">
+            Sources
+          </div>
         </div>
+
       </div>
+
     </div>
+
   </section>
 
+  <!-- Features -->
   <section class="feature-grid">
+
     <div class="feature-card">
       <div class="feature-icon">🔍</div>
       <h3>Smart Search</h3>
-      <p>Filter by keyword, location, salary, experience, or job type.</p>
+      <p>
+        Filter by keyword, location, salary, experience, or job type.
+      </p>
     </div>
+
     <div class="feature-card">
       <div class="feature-icon">📋</div>
       <h3>Application Tracker</h3>
-      <p>Track every application from applied → interview → offer.</p>
+      <p>
+        Track every application from applied → interview → offer.
+      </p>
     </div>
+
     <div class="feature-card">
       <div class="feature-icon">🔔</div>
       <h3>Job Alerts</h3>
-      <p>Get notified daily or weekly when matching jobs are posted.</p>
+      <p>
+        Get notified daily or weekly when matching jobs are posted.
+      </p>
     </div>
+
     <div class="feature-card">
       <div class="feature-icon">📊</div>
       <h3>Analytics</h3>
-      <p>Visualize your job search progress and market trends.</p>
+      <p>
+        Visualize your job search progress and market trends.
+      </p>
     </div>
+
     <div class="feature-card">
       <div class="feature-icon">↓</div>
       <h3>Export Data</h3>
-      <p>Export saved jobs or applications as CSV or JSON.</p>
+      <p>
+        Export saved jobs or applications as CSV or JSON.
+      </p>
     </div>
+
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
       <h3>Live Scraping</h3>
-      <p>Real jobs from Indeed, LinkedIn and more via JSearch API.</p>
+      <p>
+        Real jobs from Indeed, LinkedIn and more via JSearch API.
+      </p>
     </div>
+
   </section>
+
 </div>
+
 {% endblock %}
