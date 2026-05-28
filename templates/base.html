@@ -45,9 +45,6 @@
       <a href="{{ url_for('saved_jobs') }}" class="nav-link {% if request.endpoint == 'saved_jobs' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-heart"></i></span> Saved Jobs
       </a>
-      <a href="{{ url_for('collections') }}" class="nav-link {% if request.endpoint in ['collections','collection_detail'] %}active{% endif %}">
-        <span class="nav-icon"><i class="fa-solid fa-folder"></i></span> Collections
-      </a>
 
       <span class="nav-section-label">Tracking</span>
       <a href="{{ url_for('applications') }}" class="nav-link {% if request.endpoint == 'applications' %}active{% endif %}">
