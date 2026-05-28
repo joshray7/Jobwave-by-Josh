@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}{{ company_name }}{% endblock %}
+{% block page_title %}{{ company_name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('companies') }}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> All Companies
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- Company header -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div class="company-logo" style="width:72px;height:72px;font-size:1.8rem;flex-shrink:0;">
+        {{ company_name[0]|upper }}
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:6px;">{{ company_name }}</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.82rem;color:var(--text-muted);">
+          <span><i class="fa-solid fa-briefcase"></i> {{ total }} open job{{ 's' if total != 1 }}</span>
+          <span><i class="fa-solid fa-location-dot"></i> {{ top_location }}</span>
+          <span><i class="fa-solid fa-clock"></i> {{ top_type }}</span>
+          {% for src in sources %}
+          <span class="badge badge-gray">{{ src }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        {% for type, count in job_types.items() %}
+        <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--indigo);">{{ count }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">{{ type }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobs -->
+  <div class="section-header" style="margin-bottom:16px;">
+    <div>
+      <div class="section-title">Open Positions</div>
+      <div class="section-sub">{{ total }} job{{ 's' if total != 1 }} available</div>
+    </div>
+  </div>
+
+  <div class="jobs-grid">
+    {% for job in jobs %}
+    <div class="job-card">
+      <div class="job-card-header">
+        <div class="company-logo">{{ job.company[0] }}</div>
+        <div style="flex:1;min-width:0;padding-left:12px;">
+          <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-title" style="color:var(--text);">{{ job.title }}</a>
+          <div class="job-company">{{ job.company }}</div>
+        </div>
+        {% if job.id in saved_ids %}
+        <i class="fa-solid fa-bookmark" style="color:var(--indigo);font-size:0.85rem;"></i>
+        {% endif %}
+      </div>
+      <div class="job-meta">
+        {% if job.location %}<span class="badge badge-gray"><i class="fa-solid fa-location-dot"></i> {{ job.location }}</span>{% endif %}
+        <span class="badge badge-indigo">{{ job.job_type or 'full-time' }}</span>
+        {% if job.experience %}<span class="badge badge-amber">{{ job.experience }}</span>{% endif %}
+      </div>
+      {% if job.salary_min %}
+      <div class="job-salary">${{ '{:,.0f}'.format(job.salary_min/1000) }}k — ${{ '{:,.0f}'.format(job.salary_max/1000) }}k</div>
+      {% endif %}
+      {% if job.tags %}
+      <div class="job-tags">
+        {% for tag in job.tags.split(',')[:4] %}<span class="tag">{{ tag.strip() }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="job-card-footer">
+        <span class="job-time">{{ job.scraped_at.strftime('%b %d') }}</span>
+        <div style="display:flex;gap:8px;">
+          {% if job.id in applied_ids %}
+          <span class="badge badge-green" style="padding:6px 10px;">Applied ✓</span>
+          {% endif %}
+          <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline btn-sm">View →</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

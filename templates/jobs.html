@@ -109,10 +109,6 @@
         <a href="/company/{{ job.company|urlencode }}" class="job-company" style="color:var(--text-muted);text-decoration:none;">{{ job.company }}</a>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <!-- Add to collection button -->
-        <button class="btn btn-ghost btn-sm col-btn" data-job-id="{{ job.id }}" title="Add to collection">
-          <i class="fa-solid fa-folder-plus" style="font-size:0.8rem;color:var(--text-muted);"></i>
-        </button>
         <!-- Save button -->
         <button class="save-btn {% if job.id in saved_ids %}saved{% endif %}" data-job-id="{{ job.id }}">
           <i class="fa-{% if job.id in saved_ids %}solid{% else %}regular{% endif %} fa-heart"></i>
@@ -184,74 +180,9 @@
 </div>
 {% endif %}
 
-<!-- Collections picker popup -->
-<div id="col-picker" style="display:none;position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
-  <div style="font-weight:700;font-size:0.82rem;margin-bottom:10px;color:var(--text-muted);">ADD TO COLLECTION</div>
-  <div id="col-picker-list" style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
-  <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-    <a href="{{ url_for('collections') }}" style="font-size:0.78rem;color:var(--indigo);">+ Manage Collections</a>
-  </div>
-</div>
 
 {% endblock %}
 
 {% block scripts %}
-<script>
-// ── Collection picker ──────────────────────────────────────────────────────────
-let pickerJobId = null;
-const picker = document.getElementById('col-picker');
-const collections = {{ collections | tojson }};
 
-document.querySelectorAll('.col-btn').forEach(btn => {
-  btn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    pickerJobId = btn.dataset.jobId;
-
-    // Build picker list
-    const list = document.getElementById('col-picker-list');
-    if (collections.length === 0) {
-      list.innerHTML = `<div style="font-size:0.82rem;color:var(--text-muted);padding:8px 0;">No collections yet.<br><a href="/collections" style="color:var(--indigo);">Create one →</a></div>`;
-    } else {
-      list.innerHTML = collections.map(c => `
-        <button class="btn btn-ghost btn-sm col-pick-item" data-col-id="${c.id}" data-col-name="${c.name}"
-                style="width:100%;text-align:left;justify-content:flex-start;gap:8px;padding:8px 10px;">
-          <i class="fa-solid fa-folder" style="color:var(--indigo);font-size:0.75rem;"></i>
-          ${c.name}
-        </button>`).join('');
-      list.querySelectorAll('.col-pick-item').forEach(item => {
-        item.addEventListener('click', async () => {
-          const colId = item.dataset.colId;
-          const colName = item.dataset.colName;
-          picker.style.display = 'none';
-          try {
-            const res = await fetch(`/api/collections/${colId}/jobs`, {
-              method: 'POST',
-              headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({job_id: parseInt(pickerJobId)})
-            });
-            const data = await res.json();
-            if (data.success) {
-              showToast(`Added to "${colName}"`, 'success');
-            } else {
-              showToast(data.message || 'Error adding job', 'error');
-            }
-          } catch { showToast('Network error', 'error'); }
-        });
-      });
-    }
-
-    // Position picker near button
-    const rect = btn.getBoundingClientRect();
-    picker.style.top = (rect.bottom + window.scrollY + 8) + 'px';
-    picker.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
-    picker.style.display = 'block';
-  });
-});
-
-document.addEventListener('click', (e) => {
-  if (!picker.contains(e.target) && !e.target.closest('.col-btn')) {
-    picker.style.display = 'none';
-  }
-});
-</script>
 {% endblock %}
