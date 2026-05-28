@@ -7,9 +7,11 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import os, json, csv, io, threading, time
 from functools import wraps
+
 
 load_dotenv()
 
