@@ -14,12 +14,13 @@ scheduler = BackgroundScheduler(timezone='Africa/Lagos')
 
 
 def run_daily_scraper(app):
-    """Fetch fresh jobs from all profiles — JSearch, Remotive, The Muse."""
+    """Fetch fresh jobs from all profiles — JSearch, Remotive, Muse, Adzuna."""
     with app.app_context():
         from app import db, Job, ScraperLog
         from scrapers.jsearch_scraper import fetch_jsearch_jobs, SEARCH_PROFILES
         from scrapers.remotive_scraper import fetch_remotive_jobs, REMOTIVE_PROFILES
         from scrapers.muse_scraper import fetch_muse_jobs, MUSE_PROFILES
+        from scrapers.adzuna_scraper import fetch_adzuna_jobs, ADZUNA_PROFILES
         from datetime import datetime
 
         logger.info("Scheduler: starting daily scrape...")
@@ -71,6 +72,14 @@ def run_daily_scraper(app):
             run_profile(p['name'], fetch_muse_jobs, {
                 'category': p.get('category', 'Engineering'),
                 'num_pages': p.get('num_pages', 1),
+            })
+
+        # Adzuna profiles
+        for p in ADZUNA_PROFILES:
+            run_profile(p['name'], fetch_adzuna_jobs, {
+                'region': p.get('region', 'ng'),
+                'keywords': p.get('keywords', 'developer'),
+                'page': 1,
             })
 
 
