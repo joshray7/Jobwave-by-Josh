@@ -426,6 +426,7 @@ def job_detail(job_id):
     job = Job.query.get_or_404(job_id)
     job.views += 1
     db.session.commit()
+    job.description = job.description.replace('\n', '<br>') if job.description else ''
     is_saved = SavedJob.query.filter_by(user_id=current_user.id, job_id=job_id).first() is not None
     application = Application.query.filter_by(user_id=current_user.id, job_id=job_id).first()
     similar = Job.query.filter(Job.id != job_id, Job.is_active == True,
