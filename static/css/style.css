@@ -1027,7 +1027,7 @@ tr:hover td { background: var(--indigo-dim); }
   gap: 24px;
   align-items: start;
 }
-.job-detail-main { min-width: 0; }
+.job-detail-main { min-width: 0; overflow: hidden; }
 .job-detail-side { position: sticky; top: 80px; }
 
 @media (max-width: 900px) {
@@ -1043,6 +1043,7 @@ tr:hover td { background: var(--indigo-dim); }
   .job-detail-actions .btn { width: 100%; justify-content: center; text-align: center; }
   .job-detail-actions .badge { text-align: center; display: block; }
   .job-detail-header h2 { font-size: 1.2rem; }
+  .job-detail-main * { max-width: 100%; }
 }
 
 @media (max-width: 480px) {
