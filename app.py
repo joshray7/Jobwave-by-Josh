@@ -407,9 +407,21 @@ def jobs():
     applied_ids = {a.job_id for a in Application.query.filter_by(user_id=current_user.id).all()}
     collections = Collection.query.filter_by(user_id=current_user.id).all()
 
+    collections_data = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "description": c.description,
+            "color": c.color,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        }
+        for c in collections
+    ]
+
+
     return render_template('jobs.html', jobs=pagination.items, pagination=pagination,
                            sources=sources, saved_ids=saved_ids, applied_ids=applied_ids,
-                           collections=collections,
+                           collections=collections_data,
                            q=q, location=location, job_type=job_type,
                            experience=experience, salary_min=salary_min,
                            salary_max=salary_max, date_posted=date_posted,

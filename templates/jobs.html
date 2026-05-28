@@ -192,7 +192,8 @@
 // ── Collection picker ──────────────────────────────────────────────────────────
 let pickerJobId = null;
 const picker = document.getElementById('col-picker');
-const collections = {{ collections | tojson }};
+const collections = {{ collections| tojson }};
+console.log (collections);
 
 document.querySelectorAll('.col-btn').forEach(btn => {
   btn.addEventListener('click', async (e) => {
