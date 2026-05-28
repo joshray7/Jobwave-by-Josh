@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}{{ col.name }}{% endblock %}
+{% block page_title %}{{ col.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('collections') }}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Collections
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- Collection header -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="width:52px;height:52px;border-radius:12px;background:var(--indigo-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fa-solid fa-folder" style="color:var(--indigo);font-size:1.3rem;"></i>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:1.1rem;">{{ col.name }}</div>
+        {% if col.description %}
+        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:3px;">{{ col.description }}</div>
+        {% endif %}
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+          {{ col.items|length }} job{{ 's' if col.items|length != 1 }} · Created {{ col.created_at.strftime('%b %d, %Y') }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobs in collection -->
+  {% if col.items %}
+  <div class="jobs-grid">
+    {% for item in col.items %}
+    {% set job = item.job %}
+    <div class="job-card" id="job-card-{{ job.id }}">
+      <div class="job-card-header">
+        <div class="company-logo">{{ job.company[0] }}</div>
+        <div style="flex:1;min-width:0;padding-left:12px;">
+          <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-title" style="color:var(--text);">{{ job.title }}</a>
+          <a href="/company/{{ job.company|urlencode }}" class="job-company" style="color:var(--text-muted);">{{ job.company }}</a>
+        </div>
+        <button class="btn btn-ghost btn-sm remove-from-col"
+                data-col-id="{{ col.id }}" data-job-id="{{ job.id }}"
+                title="Remove from collection">
+          <i class="fa-solid fa-xmark" style="color:var(--text-muted);"></i>
+        </button>
+      </div>
+      <div class="job-meta">
+        {% if job.location %}<span class="badge badge-gray">📍 {{ job.location }}</span>{% endif %}
+        <span class="badge badge-indigo">{{ job.job_type or 'full-time' }}</span>
+        {% if job.experience %}<span class="badge badge-amber">{{ job.experience }}</span>{% endif %}
+      </div>
+      {% if job.salary_min %}
+      <div class="job-salary">${{ '{:,.0f}'.format(job.salary_min/1000) }}k — ${{ '{:,.0f}'.format(job.salary_max/1000) }}k</div>
+      {% endif %}
+      {% if job.tags %}
+      <div class="job-tags">
+        {% for tag in job.tags.split(',')[:4] %}<span class="tag">{{ tag.strip() }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="job-card-footer">
+        <span class="job-time">Added {{ item.added_at.strftime('%b %d') }}</span>
+        <div style="display:flex;gap:8px;">
+          {% if job.id in applied_ids %}
+          <span class="badge badge-green" style="padding:6px 10px;">Applied ✓</span>
+          {% endif %}
+          <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline btn-sm">View →</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-inbox" style="font-size:40px;opacity:0.3;"></i></div>
+    <h3>No jobs in this collection</h3>
+    <p>Go to the jobs page and click the folder icon on any job to add it here.</p>
+    <a href="{{ url_for('jobs') }}" class="btn btn-primary" style="margin-top:16px;">Browse Jobs</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.remove-from-col').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const colId = btn.dataset.colId;
+    const jobId = btn.dataset.jobId;
+    try {
+      const res = await fetch(`/api/collections/${colId}/jobs/${jobId}`, {method:'DELETE'});
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById(`job-card-${jobId}`)?.remove();
+        showToast('Removed from collection', 'success');
+      }
+    } catch {
+      showToast('Failed to remove', 'error');
+    }
+  });
+});
+</script>
+{% endblock %}

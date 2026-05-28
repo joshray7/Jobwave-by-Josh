@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 {% extends 'base.html' %}
 {% block title %}Analytics{% endblock %}
 {% block page_title %}Analytics{% endblock %}
@@ -8,28 +9,28 @@
   <!-- KPIs -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-icon mint">📋</div>
+      <span class="nav-icon"><i class="fa-solid fa-clipboard"></i></span>
       <div>
         <div class="stat-value">{{ my_apps }}</div>
         <div class="stat-label">Total Applications</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon amber">💬</div>
+      <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span>
       <div>
         <div class="stat-value">{{ interview_rate }}%</div>
         <div class="stat-label">Interview Rate</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon indigo">♥</div>
+      <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span>
       <div>
         <div class="stat-value">{{ my_saved }}</div>
         <div class="stat-label">Saved Jobs</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon mint">🌐</div>
+      <span class="nav-icon"><i class="fa-solid fa-globe"></i></span>
       <div>
         <div class="stat-value">{{ total_jobs }}</div>
         <div class="stat-label">Total Listings</div>
@@ -54,7 +55,7 @@
         <div class="chart-bar-row">
           <div class="chart-bar-label">{{ status|title }}</div>
           <div class="chart-bar-track">
-            <div class="chart-bar-fill" data-width="{{ ((count / total.n) * 100)|round }}%" style="background:{{ bar_color }};"></div>
+            <div class="chart-bar-fill" data-width="{{ ((count / [total.n, 1]|max) * 100)|round }}%" style="background-color: {{ bar_color }};"></div>
           </div>
           <div class="chart-bar-value">{{ count }}</div>
         </div>

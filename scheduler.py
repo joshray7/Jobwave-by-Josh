@@ -14,25 +14,22 @@ scheduler = BackgroundScheduler(timezone='Africa/Lagos')
 
 
 def run_daily_scraper(app):
-    """Fetch fresh jobs from all JSearch profiles."""
+    """Fetch fresh jobs from all profiles — JSearch, Remotive, The Muse."""
     with app.app_context():
         from app import db, Job, ScraperLog
         from scrapers.jsearch_scraper import fetch_jsearch_jobs, SEARCH_PROFILES
+        from scrapers.remotive_scraper import fetch_remotive_jobs, REMOTIVE_PROFILES
+        from scrapers.muse_scraper import fetch_muse_jobs, MUSE_PROFILES
         from datetime import datetime
 
         logger.info("Scheduler: starting daily scrape...")
-        for profile in SEARCH_PROFILES:
-            log = ScraperLog(source=profile['name'], status='running')
+
+        def run_profile(profile_name, fetch_fn, kwargs):
+            log = ScraperLog(source=profile_name, status='running')
             db.session.add(log)
             db.session.commit()
             try:
-                jobs_data = fetch_jsearch_jobs(
-                    query=profile.get('query', ''),
-                    location=profile.get('location', ''),
-                    num_pages=profile.get('num_pages', 1),
-                    date_posted=profile.get('date_posted', 'month'),
-                    remote_only=profile.get('remote_only', False),
-                )
+                jobs_data = fetch_fn(**kwargs)
                 added = 0
                 for jd in jobs_data:
                     if not Job.query.filter_by(source_id=jd.get('source_id')).first():
@@ -43,13 +40,38 @@ def run_daily_scraper(app):
                 log.jobs_found = len(jobs_data)
                 log.jobs_added = added
                 log.ended_at = datetime.utcnow()
-                logger.info(f"Scheduler: {profile['name']} — {added} new jobs added")
+                logger.info(f"{profile_name} — {added} new jobs")
             except Exception as e:
                 log.status = 'failed'
                 log.message = str(e)
                 log.ended_at = datetime.utcnow()
-                logger.error(f"Scheduler: {profile['name']} failed — {e}")
+                logger.error(f"{profile_name} failed: {e}")
             db.session.commit()
+
+        # JSearch profiles
+        for p in SEARCH_PROFILES:
+            run_profile(p['name'], fetch_jsearch_jobs, {
+                'query': p.get('query', ''),
+                'location': p.get('location', ''),
+                'num_pages': p.get('num_pages', 1),
+                'date_posted': p.get('date_posted', 'month'),
+                'remote_only': p.get('remote_only', False),
+            })
+
+        # Remotive profiles
+        for p in REMOTIVE_PROFILES:
+            run_profile(p['name'], fetch_remotive_jobs, {
+                'category': p.get('category', 'software-dev'),
+                'limit': p.get('limit', 20),
+                'search': p.get('search', ''),
+            })
+
+        # Muse profiles
+        for p in MUSE_PROFILES:
+            run_profile(p['name'], fetch_muse_jobs, {
+                'category': p.get('category', 'Engineering'),
+                'num_pages': p.get('num_pages', 1),
+            })
 
 
 def run_alert_emails(app):

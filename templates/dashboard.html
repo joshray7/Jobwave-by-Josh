@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 {% extends 'base.html' %}
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -8,28 +10,28 @@
   <!-- Stats -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-icon mint">🔍</div>
+      <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>
       <div>
         <div class="stat-value">{{ recent_jobs|length }}</div>
         <div class="stat-label">New Jobs Today</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon indigo">♥</div>
+      <span class="nav-icon"><i class="fa-solid fa-heart"></i></span>
       <div>
         <div class="stat-value">{{ saved_count }}</div>
         <div class="stat-label">Saved Jobs</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon amber">📋</div>
+      <span class="nav-icon"><i class="fa-solid fa-clipboard"></i></span>
       <div>
         <div class="stat-value">{{ app_count }}</div>
         <div class="stat-label">Applications</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon indigo">🔔</div>
+      <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>
       <div>
         <div class="stat-value">{{ alert_count }}</div>
         <div class="stat-label">Active Alerts</div>
@@ -135,9 +137,14 @@
       <div class="card">
         <div class="section-title" style="margin-bottom:12px;">Quick Actions</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <a href="{{ url_for('jobs') }}?type=remote" class="btn btn-outline btn-sm" style="justify-content:flex-start;">🌐 Browse Remote Jobs</a>
-          <a href="{{ url_for('alerts') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">🔔 Manage Alerts</a>
-          <a href="{{ url_for('export_jobs') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">↓ Export Saved Jobs</a>
+          <a href="{{ url_for('jobs') }} " class="btn btn-outline btn-sm" style="justify-content:flex-start;">
+            <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>Browse Jobs</a>
+          <a href="{{ url_for('alerts') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">
+            <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>Manage Alerts 
+          </a>
+          <a href="{{ url_for('export_jobs') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">
+            <span class="nav-icon"><i class="fa-solid fa-download"></i></span>Export Saved Jobs
+          </a>
         </div>
       </div>
 

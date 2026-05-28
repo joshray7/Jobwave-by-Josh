@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Collections{% endblock %}
+{% block page_title %}Collections{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <!-- Header + create button -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="color:var(--text-muted);font-size:0.85rem;">{{ collections|length }} collection{{ 's' if collections|length != 1 }}</div>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">
+      <i class="fa-solid fa-plus"></i> New Collection
+    </button>
+  </div>
+
+  <!-- Collections grid -->
+  {% if collections %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+    {% for col in collections %}
+    <div class="card collection-card" style="border-color:var(--col-{{ col.color }},var(--indigo));position:relative;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:var(--col-{{ col.color }}-dim, var(--indigo-dim));display:flex;align-items:center;justify-content:center;">
+            <i class="fa-solid fa-folder" style="color:var(--col-{{ col.color }},var(--indigo));font-size:1rem;"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;">{{ col.name }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">{{ col.items|length }} job{{ 's' if col.items|length != 1 }}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm delete-col-btn" data-id="{{ col.id }}" data-name="{{ col.name }}" title="Delete collection">
+          <i class="fa-solid fa-trash" style="font-size:0.75rem;color:var(--text-muted);"></i>
+        </button>
+      </div>
+      {% if col.description %}
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">{{ col.description }}</div>
+      {% endif %}
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:14px;">
+        Created {{ col.created_at.strftime('%b %d, %Y') }}
+      </div>
+      <a href="/collections/{{ col.id }}" class="btn btn-outline btn-sm" style="width:100%;justify-content:center;">
+        View Jobs <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-folder-open" style="font-size:48px;opacity:0.3;"></i></div>
+    <h3>No collections yet</h3>
+    <p>Create a collection to organize your saved jobs — like "Senior Roles", "Startups", or "Apply This Week".</p>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="openCreateModal()">
+      <i class="fa-solid fa-plus"></i> Create First Collection
+    </button>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Create Collection Modal -->
+<div id="create-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:440px;margin:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-weight:800;font-size:1.1rem;">New Collection</div>
+      <button onclick="closeCreateModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:6px;">Name *</label>
+      <input id="col-name" type="text" placeholder="e.g. Senior Dev Roles" maxlength="100"
+             style="width:100%;padding:10px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:6px;">Description (optional)</label>
+      <input id="col-desc" type="text" placeholder="What's this collection for?" maxlength="300"
+             style="width:100%;padding:10px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:10px;">Color</label>
+      <div style="display:flex;gap:10px;">
+        {% for color, label in [('indigo','Indigo'),('mint','Mint'),('amber','Amber'),('red','Red')] %}
+        <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <input type="radio" name="col-color" value="{{ color }}" {% if loop.first %}checked{% endif %} style="display:none;" class="color-radio">
+          <div class="color-swatch color-{{ color }}" data-color="{{ color }}"
+               style="width:28px;height:28px;border-radius:50%;border:3px solid transparent;transition:border-color 0.15s;
+               {% if loop.first %}border-color:var(--text);{% endif %}
+               background:{% if color == 'indigo' %}var(--indigo){% elif color == 'mint' %}var(--mint){% elif color == 'amber' %}#ffb400{% else %}#ff5555{% endif %};">
+          </div>
+          <span style="font-size:0.7rem;color:var(--text-muted);">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeCreateModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      <button onclick="createCollection()" class="btn btn-primary" style="flex:1;" id="create-btn">Create</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openCreateModal() {
+  document.getElementById('create-modal').style.display = 'flex';
+  document.getElementById('col-name').focus();
+}
+function closeCreateModal() {
+  document.getElementById('create-modal').style.display = 'none';
+  document.getElementById('col-name').value = '';
+  document.getElementById('col-desc').value = '';
+}
+
+// Color swatch selection
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.style.borderColor = 'transparent');
+    swatch.style.borderColor = 'var(--text)';
+    const radio = document.querySelector(`input[name="col-color"][value="${swatch.dataset.color}"]`);
+    if (radio) radio.checked = true;
+  });
+});
+
+async function createCollection() {
+  const name = document.getElementById('col-name').value.trim();
+  if (!name) { showToast('Please enter a name', 'error'); return; }
+  const color = document.querySelector('input[name="col-color"]:checked')?.value || 'indigo';
+  const desc = document.getElementById('col-desc').value.trim();
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const res = await fetch('/api/collections', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, description: desc, color})
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Collection "${name}" created!`, 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.message || 'Error creating collection', 'error');
+      btn.disabled = false; btn.textContent = 'Create';
+    }
+  } catch {
+    showToast('Network error', 'error');
+    btn.disabled = false; btn.textContent = 'Create';
+  }
+}
+
+// Delete collection
+document.querySelectorAll('.delete-col-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const id = btn.dataset.id;
+    const name = btn.dataset.name;
+    if (!confirm(`Delete "${name}"? All jobs in it will be removed from the collection.`)) return;
+    try {
+      await fetch(`/api/collections/${id}`, {method:'DELETE'});
+      showToast(`"${name}" deleted`, 'success');
+      setTimeout(() => location.reload(), 600);
+    } catch {
+      showToast('Failed to delete', 'error');
+    }
+  });
+});
+
+// Close modal on backdrop click
+document.getElementById('create-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeCreateModal();
+});
+</script>
+{% endblock %}

@@ -1377,3 +1377,80 @@ textarea.form-control {
 .theme-toggle svg { width:16px; height:16px; stroke-width:2; }
 .btn-icon svg { width:16px; height:16px; stroke-width:2; }
 .sidebar-toggle svg { width:18px; height:18px; stroke-width:2; }
+
+/* ── Font Awesome icon sizing ── */
+.nav-icon { display:flex; align-items:center; justify-content:center; width:18px; flex-shrink:0; }
+.nav-icon i { font-size:14px; }
+.theme-toggle i { font-size:14px; }
+.sidebar-toggle i { font-size:16px; }
+
+/* ── Sidebar scroll ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--indigo); border-radius: 3px; }
+
+/* ── Clickable table rows ── */
+tr[onclick] { cursor: pointer; }
+tr[onclick]:hover td { background: var(--indigo-dim); }
+
+/* ── Run status badge ── */
+.run-status { font-size: 0.72rem; font-weight: 600; }
+
+/* ── Advanced filters ── */
+.advanced-filters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.filter-group label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.filter-input {
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .advanced-filters { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .advanced-filters { grid-template-columns: 1fr; }
+}
+
+/* ── Company card hover ── */
+.company-card { cursor: pointer; }
+.company-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59,0,255,0.15);
+  border-color: var(--indigo);
+}
+
+/* ── Collection colors ── */
+:root {
+  --col-indigo: var(--indigo);
+  --col-indigo-dim: var(--indigo-dim);
+  --col-mint: var(--mint);
+  --col-mint-dim: rgba(0,200,138,0.1);
+  --col-amber: #ffb400;
+  --col-amber-dim: rgba(255,180,0,0.1);
+  --col-red: #ff5555;
+  --col-red-dim: rgba(255,85,85,0.1);
+}

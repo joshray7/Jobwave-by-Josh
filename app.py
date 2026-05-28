@@ -149,6 +149,24 @@ class Alert(db.Model):
     last_sent = db.Column(db.DateTime)
 
 
+class Collection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(300))
+    color = db.Column(db.String(20), default='indigo')  # indigo | mint | amber | red
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    items = db.relationship('CollectionItem', backref='collection', lazy=True, cascade='all, delete-orphan')
+
+
+class CollectionItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    collection_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=False)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    job = db.relationship('Job')
+
+
 class ScraperLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     source = db.Column(db.String(100))
@@ -344,6 +362,8 @@ def jobs():
     job_type = request.args.get('type', '')
     experience = request.args.get('experience', '')
     salary_min = request.args.get('salary_min', type=int)
+    salary_max = request.args.get('salary_max', type=int)
+    date_posted = request.args.get('date_posted', '')  # 1d | 7d | 30d
     source = request.args.get('source', '')
     sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
@@ -363,6 +383,14 @@ def jobs():
         query = query.filter(Job.experience == experience)
     if salary_min:
         query = query.filter(Job.salary_min >= salary_min)
+    if salary_max:
+        query = query.filter(db.or_(Job.salary_max <= salary_max, Job.salary_max == None))
+    if date_posted:
+        days_map = {'1d': 1, '7d': 7, '30d': 30}
+        days = days_map.get(date_posted)
+        if days:
+            cutoff = datetime.utcnow() - timedelta(days=days)
+            query = query.filter(Job.scraped_at >= cutoff)
     if source:
         query = query.filter(Job.source == source)
 
@@ -375,14 +403,16 @@ def jobs():
 
     pagination = query.paginate(page=page, per_page=12, error_out=False)
     sources = [r[0] for r in db.session.query(Job.source).distinct().all() if r[0]]
-
     saved_ids = {s.job_id for s in SavedJob.query.filter_by(user_id=current_user.id).all()}
     applied_ids = {a.job_id for a in Application.query.filter_by(user_id=current_user.id).all()}
+    collections = Collection.query.filter_by(user_id=current_user.id).all()
 
     return render_template('jobs.html', jobs=pagination.items, pagination=pagination,
                            sources=sources, saved_ids=saved_ids, applied_ids=applied_ids,
+                           collections=collections,
                            q=q, location=location, job_type=job_type,
                            experience=experience, salary_min=salary_min,
+                           salary_max=salary_max, date_posted=date_posted,
                            source=source, sort=sort)
 
 
@@ -626,12 +656,160 @@ def profile():
     return render_template('profile.html', prof=prof)
 
 
+# ─── Company Pages ──────────────────────────────────────────────────────────────
+
+@app.route('/company/<path:company_name>')
+@login_required
+def company_page(company_name):
+    # Get all jobs from this company
+    company_jobs = Job.query.filter(
+        Job.company.ilike(company_name),
+        Job.is_active == True
+    ).order_by(Job.scraped_at.desc()).all()
+
+    if not company_jobs:
+        flash(f'No jobs found for {company_name}', 'error')
+        return redirect(url_for('jobs'))
+
+    # Stats
+    total = len(company_jobs)
+    job_types = {}
+    locations = {}
+    sources = set()
+    for j in company_jobs:
+        job_types[j.job_type or 'full-time'] = job_types.get(j.job_type or 'full-time', 0) + 1
+        if j.location:
+            locations[j.location] = locations.get(j.location, 0) + 1
+        if j.source:
+            sources.add(j.source)
+
+    top_location = max(locations, key=locations.get) if locations else 'Various'
+    top_type = max(job_types, key=job_types.get) if job_types else 'full-time'
+
+    saved_ids = {s.job_id for s in SavedJob.query.filter_by(user_id=current_user.id).all()}
+    applied_ids = {a.job_id for a in Application.query.filter_by(user_id=current_user.id).all()}
+
+    return render_template('company.html',
+        company_name=company_name,
+        jobs=company_jobs,
+        total=total,
+        top_location=top_location,
+        top_type=top_type,
+        job_types=job_types,
+        sources=list(sources),
+        saved_ids=saved_ids,
+        applied_ids=applied_ids,
+    )
+
+
+@app.route('/companies')
+@login_required
+def companies():
+    # Get all companies with job counts
+    results = db.session.query(
+        Job.company,
+        db.func.count(Job.id).label('job_count'),
+        db.func.max(Job.scraped_at).label('latest'),
+    ).filter(
+        Job.is_active == True
+    ).group_by(Job.company).order_by(db.desc('job_count')).all()
+
+    q = request.args.get('q', '')
+    if q:
+        results = [r for r in results if q.lower() in r.company.lower()]
+
+    return render_template('companies.html', companies=results, q=q)
+
+
+# ─── Collections ────────────────────────────────────────────────────────────────
+
+@app.route('/collections')
+@login_required
+def collections():
+    cols = Collection.query.filter_by(user_id=current_user.id)\
+        .order_by(Collection.created_at.desc()).all()
+    return render_template('collections.html', collections=cols)
+
+
+@app.route('/collections/<int:col_id>')
+@login_required
+def collection_detail(col_id):
+    col = Collection.query.filter_by(id=col_id, user_id=current_user.id).first_or_404()
+    saved_ids = {s.job_id for s in SavedJob.query.filter_by(user_id=current_user.id).all()}
+    applied_ids = {a.job_id for a in Application.query.filter_by(user_id=current_user.id).all()}
+    return render_template('collection_detail.html', col=col, saved_ids=saved_ids, applied_ids=applied_ids)
+
+
+@app.route('/api/collections', methods=['POST'])
+@login_required
+def create_collection():
+    data = request.get_json(force=True, silent=True) or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'}), 400
+    if Collection.query.filter_by(user_id=current_user.id, name=name).first():
+        return jsonify({'success': False, 'message': 'Collection name already exists'}), 400
+    col = Collection(
+        user_id=current_user.id,
+        name=name,
+        description=data.get('description', '').strip(),
+        color=data.get('color', 'indigo'),
+    )
+    db.session.add(col)
+    db.session.commit()
+    return jsonify({'success': True, 'id': col.id, 'name': col.name, 'color': col.color})
+
+
+@app.route('/api/collections/<int:col_id>', methods=['DELETE'])
+@login_required
+def delete_collection(col_id):
+    col = Collection.query.filter_by(id=col_id, user_id=current_user.id).first_or_404()
+    db.session.delete(col)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/collections/<int:col_id>/jobs', methods=['POST'])
+@login_required
+def add_to_collection(col_id):
+    col = Collection.query.filter_by(id=col_id, user_id=current_user.id).first_or_404()
+    data = request.get_json(force=True, silent=True) or {}
+    job_id = data.get('job_id')
+    if not job_id:
+        return jsonify({'success': False, 'message': 'job_id required'}), 400
+    job = Job.query.get_or_404(job_id)
+    if CollectionItem.query.filter_by(collection_id=col_id, job_id=job_id).first():
+        return jsonify({'success': False, 'message': 'Already in collection'}), 400
+    db.session.add(CollectionItem(collection_id=col_id, job_id=job_id))
+    db.session.commit()
+    return jsonify({'success': True, 'collection': col.name})
+
+
+@app.route('/api/collections/<int:col_id>/jobs/<int:job_id>', methods=['DELETE'])
+@login_required
+def remove_from_collection(col_id, job_id):
+    item = CollectionItem.query.filter_by(collection_id=col_id, job_id=job_id).first_or_404()
+    col = Collection.query.get(col_id)
+    if col.user_id != current_user.id:
+        return jsonify({'success': False}), 403
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/collections/list')
+@login_required
+def list_collections():
+    cols = Collection.query.filter_by(user_id=current_user.id).all()
+    return jsonify([{'id': c.id, 'name': c.name, 'color': c.color} for c in cols])
+
+
 # ─── AI Match Score ─────────────────────────────────────────────────────────────
 
 @app.route('/api/jobs/<int:job_id>/match', methods=['POST'])
 @login_required
-@limiter.limit('30 per hour')
 def get_match_score(job_id):
+    return jsonify({'error': 'AI Match Scoring is coming soon. Stay tuned!'}), 503
     job = Job.query.get_or_404(job_id)
     prof = current_user.profile
 
@@ -718,49 +896,226 @@ Respond with ONLY a JSON object in this exact format, nothing else:
 
 def run_scraper_task(profile_name, app_context):
     with app_context:
-        from scrapers.jsearch_scraper import fetch_jsearch_jobs, get_profile
         log = ScraperLog(source=profile_name, status='running')
         db.session.add(log)
         db.session.commit()
+        log_id = log.id
+
         try:
-            profile = get_profile(profile_name)
-            if not profile:
-                raise ValueError(f"Unknown search profile: {profile_name}")
-            jobs_data = fetch_jsearch_jobs(
-                query=profile.get('query', ''),
-                location=profile.get('location', ''),
-                num_pages=profile.get('num_pages', 1),
-                date_posted=profile.get('date_posted', 'month'),
-                remote_only=profile.get('remote_only', False),
-            )
+            jobs_data = []
+            profile_found = False
+
+            # ── JSearch ──
+            from scrapers.jsearch_scraper import get_profile as get_jsearch_profile, fetch_jsearch_jobs
+            jsearch_profile = get_jsearch_profile(profile_name)
+            if jsearch_profile:
+                profile_found = True
+                jobs_data = fetch_jsearch_jobs(
+                    query=jsearch_profile.get('query', ''),
+                    location=jsearch_profile.get('location', ''),
+                    num_pages=jsearch_profile.get('num_pages', 1),
+                    date_posted=jsearch_profile.get('date_posted', 'month'),
+                    remote_only=jsearch_profile.get('remote_only', False),
+                )
+
+            # ── Remotive ──
+            if not profile_found:
+                from scrapers.remotive_scraper import get_remotive_profile, fetch_remotive_jobs
+                remotive_profile = get_remotive_profile(profile_name)
+                if remotive_profile:
+                    profile_found = True
+                    jobs_data = fetch_remotive_jobs(
+                        category=remotive_profile.get('category', 'software-dev'),
+                        limit=remotive_profile.get('limit', 20),
+                        search=remotive_profile.get('search', ''),
+                    )
+
+            # ── The Muse ──
+            if not profile_found:
+                from scrapers.muse_scraper import get_muse_profile, fetch_muse_jobs
+                muse_profile = get_muse_profile(profile_name)
+                if muse_profile:
+                    profile_found = True
+                    jobs_data = fetch_muse_jobs(
+                        category=muse_profile.get('category', 'Engineering'),
+                        num_pages=muse_profile.get('num_pages', 1),
+                    )
+
+            # ── Adzuna ──
+            if not profile_found:
+                from scrapers.adzuna_scraper import get_adzuna_profile, fetch_adzuna_jobs
+                adzuna_profile = get_adzuna_profile(profile_name)
+                if adzuna_profile:
+                    profile_found = True
+                    jobs_data = fetch_adzuna_jobs(
+                        what=adzuna_profile.get('what', ''),
+                        where=adzuna_profile.get('where', ''),
+                        country=adzuna_profile.get('country', 'ng'),
+                        num_pages=adzuna_profile.get('num_pages', 1),
+                        results_per_page=adzuna_profile.get('results_per_page', 20),
+                    )
+
+            if not profile_found:
+                raise ValueError(f"Unknown profile: {profile_name}")
+
             added = 0
             for jd in jobs_data:
                 if not Job.query.filter_by(source_id=jd.get('source_id')).first():
-                    job = Job(**jd)
-                    db.session.add(job)
+                    db.session.add(Job(**jd))
                     added += 1
             db.session.commit()
+
+            log = ScraperLog.query.get(log_id)
             log.status = 'success'
             log.jobs_found = len(jobs_data)
             log.jobs_added = added
             log.ended_at = datetime.utcnow()
+            db.session.commit()
+            app.logger.info(f"Scraper: {profile_name} — {added} new jobs added")
+
         except Exception as e:
-            log.status = 'failed'
-            log.message = str(e)
-            log.ended_at = datetime.utcnow()
-        db.session.commit()
+            app.logger.error(f"Scraper error [{profile_name}]: {e}")
+            try:
+                log = ScraperLog.query.get(log_id)
+                if log:
+                    log.status = 'failed'
+                    log.message = str(e)[:500]
+                    log.ended_at = datetime.utcnow()
+                    db.session.commit()
+            except Exception:
+                pass
+
+
+def run_scraper_task_with_log(profile_name, log_id, app_context):
+    """Same as run_scraper_task but uses an existing log entry by ID."""
+    with app_context:
+        try:
+            jobs_data = []
+            profile_found = False
+
+            from scrapers.jsearch_scraper import get_profile as get_jsearch_profile, fetch_jsearch_jobs
+            jsearch_profile = get_jsearch_profile(profile_name)
+            if jsearch_profile:
+                profile_found = True
+                jobs_data = fetch_jsearch_jobs(
+                    query=jsearch_profile.get('query', ''),
+                    location=jsearch_profile.get('location', ''),
+                    num_pages=jsearch_profile.get('num_pages', 1),
+                    date_posted=jsearch_profile.get('date_posted', 'month'),
+                    remote_only=jsearch_profile.get('remote_only', False),
+                )
+
+            if not profile_found:
+                from scrapers.remotive_scraper import get_remotive_profile, fetch_remotive_jobs
+                remotive_profile = get_remotive_profile(profile_name)
+                if remotive_profile:
+                    profile_found = True
+                    jobs_data = fetch_remotive_jobs(
+                        category=remotive_profile.get('category', 'software-dev'),
+                        limit=remotive_profile.get('limit', 20),
+                        search=remotive_profile.get('search', ''),
+                    )
+
+            if not profile_found:
+                from scrapers.muse_scraper import get_muse_profile, fetch_muse_jobs
+                muse_profile = get_muse_profile(profile_name)
+                if muse_profile:
+                    profile_found = True
+                    jobs_data = fetch_muse_jobs(
+                        category=muse_profile.get('category', 'Engineering'),
+                        num_pages=muse_profile.get('num_pages', 1),
+                    )
+
+            if not profile_found:
+                from scrapers.adzuna_scraper import get_adzuna_profile, fetch_adzuna_jobs
+                adzuna_profile = get_adzuna_profile(profile_name)
+                if adzuna_profile:
+                    profile_found = True
+                    jobs_data = fetch_adzuna_jobs(
+                        region=adzuna_profile.get('region', 'ng'),
+                        keywords=adzuna_profile.get('keywords', 'developer'),
+                        page=1,
+                    )
+
+            if not profile_found:
+                raise ValueError(f"Unknown profile: {profile_name}")
+
+            added = 0
+            for jd in jobs_data:
+                if not Job.query.filter_by(source_id=jd.get('source_id')).first():
+                    db.session.add(Job(**jd))
+                    added += 1
+            db.session.commit()
+
+            log = ScraperLog.query.get(log_id)
+            if log:
+                log.status = 'success'
+                log.jobs_found = len(jobs_data)
+                log.jobs_added = added
+                log.ended_at = datetime.utcnow()
+                db.session.commit()
+            app.logger.info(f"Scraper: {profile_name} — {added} new jobs")
+
+        except Exception as e:
+            app.logger.error(f"Scraper error [{profile_name}]: {e}")
+            try:
+                log = ScraperLog.query.get(log_id)
+                if log:
+                    log.status = 'failed'
+                    log.message = str(e)[:500]
+                    log.ended_at = datetime.utcnow()
+                    db.session.commit()
+            except Exception:
+                pass
+
 
 
 @app.route('/api/scraper/run', methods=['POST'])
 @login_required
 @admin_required
-@limiter.limit('10 per hour')
+@limiter.limit('100 per hour')
 def trigger_scraper():
-    source = request.json.get('source', 'demo')
-    t = threading.Thread(target=run_scraper_task, args=(source, app.app_context()))
-    t.daemon = True
-    t.start()
-    return jsonify({'success': True, 'message': f'Scraper started for {source}'})
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        source = data.get('source', '')
+        if not source:
+            return jsonify({'success': False, 'message': 'No source specified'}), 400
+        log = ScraperLog(source=source, status='running')
+        db.session.add(log)
+        db.session.commit()
+        log_id = log.id
+        t = threading.Thread(target=run_scraper_task_with_log,
+                             args=(source, log_id, app.app_context()))
+        t.daemon = True
+        t.start()
+        return jsonify({'success': True, 'message': f'Scraper started for {source}', 'log_id': log_id})
+    except Exception as e:
+        app.logger.error(f"trigger_scraper error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/admin/logs-partial')
+@login_required
+@admin_required
+def logs_partial():
+    logs = ScraperLog.query.order_by(ScraperLog.started_at.desc()).limit(20).all()
+    if not logs:
+        return '<div class="empty-state" style="padding:30px 0;"><div style="color:var(--text-muted);">No scraper runs yet.</div></div>'
+    rows = ''
+    for log in logs:
+        badge = 'badge-green' if log.status == 'success' else ('badge-red' if log.status == 'failed' else 'badge-amber')
+        rows += f'''
+        <tr style="cursor:pointer;" onclick="window.location='/admin/log/{log.id}/jobs'">
+          <td style="font-weight:600;">{log.source}</td>
+          <td><span class="badge {badge}">{log.status}</span></td>
+          <td style="color:var(--mint);font-weight:600;">+{log.jobs_added}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem;">{log.started_at.strftime('%b %d, %H:%M')}</td>
+          <td class="hide-mobile" style="font-size:0.78rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{log.message or '—'}</td>
+          <td><a href="/admin/log/{log.id}/jobs" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()"><i class="fa-solid fa-eye"></i></a></td>
+        </tr>'''
+    return f'''<div class="table-wrap" style="margin-top:12px;">
+      <table><thead><tr><th>Source</th><th>Status</th><th>Added</th><th>Started</th><th class="hide-mobile">Message</th><th>Jobs</th></tr></thead>
+      <tbody>{rows}</tbody></table></div>'''
 
 
 # ─── Admin ─────────────────────────────────────────────────────────────────────
@@ -769,7 +1124,11 @@ def trigger_scraper():
 @login_required
 @admin_required
 def admin():
-    from scrapers.jsearch_scraper import SEARCH_PROFILES
+    from scrapers.jsearch_scraper import SEARCH_PROFILES as JSEARCH_PROFILES
+    from scrapers.remotive_scraper import REMOTIVE_PROFILES
+    from scrapers.muse_scraper import MUSE_PROFILES
+    from scrapers.adzuna_scraper import ADZUNA_PROFILES
+    all_profiles = JSEARCH_PROFILES + REMOTIVE_PROFILES + MUSE_PROFILES + ADZUNA_PROFILES
     users = User.query.order_by(User.created_at.desc()).all()
     logs = ScraperLog.query.order_by(ScraperLog.started_at.desc()).limit(20).all()
     total_jobs = Job.query.count()
@@ -778,17 +1137,60 @@ def admin():
     return render_template('admin.html', users=users, logs=logs,
                            total_jobs=total_jobs, active_jobs=active_jobs,
                            total_users=total_users,
-                           scraper_profiles=SEARCH_PROFILES)
+                           scraper_profiles=all_profiles)
 
 
 @app.route('/admin/clear-fake-jobs', methods=['POST'])
 @login_required
 @admin_required
 def clear_fake_jobs():
-    # Delete all jobs not from JSearch (the fake seeded ones)
     deleted = Job.query.filter(Job.source != 'JSearch').delete()
     db.session.commit()
     return jsonify({'success': True, 'deleted': deleted})
+
+
+@app.route('/api/scraper/status/<int:log_id>')
+@login_required
+@admin_required
+def scraper_status(log_id):
+    log = ScraperLog.query.get_or_404(log_id)
+    return jsonify({
+        'id': log.id,
+        'source': log.source,
+        'status': log.status,
+        'jobs_found': log.jobs_found,
+        'jobs_added': log.jobs_added,
+        'message': log.message or '',
+        'started_at': log.started_at.strftime('%b %d, %H:%M'),
+        'ended_at': log.ended_at.strftime('%b %d, %H:%M') if log.ended_at else None,
+    })
+
+
+@app.route('/admin/log/<int:log_id>/jobs')
+@login_required
+@admin_required
+def scraper_log_jobs(log_id):
+    log = ScraperLog.query.get_or_404(log_id)
+    jobs = []
+    if log.status == 'success' and log.jobs_added and log.jobs_added > 0:
+        from datetime import timedelta
+        # Find jobs from this source scraped during this log's run window
+        window_start = log.started_at - timedelta(seconds=5)
+        window_end = (log.ended_at or log.started_at) + timedelta(seconds=60)
+        jobs = Job.query.filter(
+            Job.source == log.source,
+            Job.scraped_at >= window_start,
+            Job.scraped_at <= window_end,
+        ).order_by(Job.scraped_at.desc()).all()
+
+        # Fallback — if window query returns nothing, get latest jobs from source
+        if not jobs:
+            jobs = Job.query.filter_by(source=log.source)\
+                .order_by(Job.scraped_at.desc())\
+                .limit(log.jobs_added)\
+                .all()
+
+    return render_template('log_jobs.html', log=log, jobs=jobs)
 
 
 @app.route('/admin/users/<int:user_id>/toggle', methods=['POST'])

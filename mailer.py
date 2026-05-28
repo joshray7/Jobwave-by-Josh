@@ -16,7 +16,7 @@ def get_client():
 
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'onboarding@resend.dev')
 APP_NAME   = 'JobWave'
-APP_URL    = os.environ.get('APP_URL', 'http://localhost:5000')
+APP_URL    = os.environ.get('APP_URL', 'https://jobwave-by-josh.onrender.com')
 
 # ── Email base template ────────────────────────────────────────────────────────
 def base_html(title: str, body: str) -> str:

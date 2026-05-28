@@ -242,31 +242,7 @@ if (alertForm) {
   });
 }
 
-// ── Admin scraper trigger ─────────────────────────────────────────────────────
-document.querySelectorAll('.run-scraper-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const source = btn.dataset.source;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Running…';
-    try {
-      const res = await fetch('/api/scraper/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source })
-      });
-      const data = await res.json();
-      showToast(data.message, 'success');
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = '▶ Run';
-      }, 3000);
-    } catch {
-      showToast('Scraper error', 'error');
-      btn.disabled = false;
-      btn.textContent = '▶ Run';
-    }
-  });
-});
+// ── Admin scraper trigger handled in admin.html ───────────────────────────────
 
 // ── Admin user toggle ─────────────────────────────────────────────────────────
 document.querySelectorAll('.toggle-user-btn').forEach(btn => {

@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 {% extends 'base.html' %}
 {% block title %}Admin Panel{% endblock %}
 {% block page_title %}Admin Panel{% endblock %}
@@ -7,48 +8,81 @@
 
   <!-- Stats -->
   <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon mint">👥</div>
+    <a class="stat-card">
+      <div class="stat-icon mint"><i class="fa-solid fa-users"></i></div>
       <div><div class="stat-value">{{ total_users }}</div><div class="stat-label">Total Users</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon indigo">📋</div>
+    </a>
+    <a href="{{ url_for('jobs') }}" class="stat-card">
+      <div class="stat-icon indigo"><i class="fa-solid fa-briefcase"></i></div>
       <div><div class="stat-value">{{ total_jobs }}</div><div class="stat-label">Total Jobs</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon amber">✅</div>
+    </a>
+    <a href="{{ url_for('applications') }}" class="stat-card">
+      <div class="stat-icon blue"><i class="fa-solid fa-chart-line"></i></div>
+      <div><div class="stat-value">{{ total_applications }}</div><div class="stat-label">Total Applications</div></div>
+    </a>
+    <a href="{{ url_for('alerts') }}" class="stat-card">
+      <div class="stat-icon amber"><i class="fa-solid fa-bell"></i></div>
+      <div><div class="stat-value">{{ total_alerts }}</div><div class="stat-label">Total Alerts</div></div>
+    </a>
+    <a href="{{ url_for('jobs') }}" class="stat-card">
+      <div class="stat-icon amber"><i class="fa-solid fa-circle-check"></i></div>
       <div><div class="stat-value">{{ active_jobs }}</div><div class="stat-label">Active Jobs</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon red">⏸</div>
+    </a>
+    <a href="{{ url_for('jobs') }}" class="stat-card">
+      <div class="stat-icon red"><i class="fa-solid fa-pause"></i></div>
       <div><div class="stat-value">{{ total_jobs - active_jobs }}</div><div class="stat-label">Inactive Jobs</div></div>
-    </div>
+    </a>
   </div>
 
   <!-- Scraper Control -->
   <div class="card" style="margin-bottom:20px;">
     <div class="section-header">
       <div>
-        <div class="section-title">JSearch Scraper Profiles</div>
-        <div class="section-sub">Fetches real jobs from Indeed, LinkedIn & more</div>
+        <div class="section-title">Scraper Profiles</div>
+        <div class="section-sub">JSearch · Remotive · The Muse</div>
       </div>
-      <button class="btn btn-danger btn-sm" id="clear-fake-btn">🗑 Clear Fake Jobs</button>
+      <button class="btn btn-danger btn-sm" id="clear-fake-btn">
+        <i class="fa-solid fa-trash"></i> Clear Fake Jobs
+      </button>
     </div>
     <div class="scraper-profiles-grid">
       {% for profile in scraper_profiles %}
-      <div class="scraper-source">
+      <div class="scraper-source" id="profile-{{ loop.index }}">
         <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <div class="source-dot green"></div>
+            <div class="source-dot green" id="dot-{{ loop.index }}"></div>
             <div style="font-weight:700;font-size:0.875rem;">{{ profile.name }}</div>
           </div>
-          <button class="btn btn-outline btn-sm run-scraper-btn" data-source="{{ profile.name }}">▶ Run</button>
+          <button class="btn btn-outline btn-sm run-scraper-btn"
+                  data-source="{{ profile.name }}"
+                  data-profile-idx="{{ loop.index }}">
+            <i class="fa-solid fa-play" style="font-size:10px;"></i> Run
+          </button>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.6;">
-          <div>🔍 {{ profile.query }}</div>
-          {% if profile.location %}<div>📍 {{ profile.location }}</div>{% endif %}
-          {% if profile.get('remote_only') %}<div>🌐 Remote only</div>{% endif %}
-          <div>📄 {{ profile.num_pages }} page(s) · {{ profile.date_posted }}</div>
+          {% if profile.get('query') %}
+          <div><i class="fa-solid fa-magnifying-glass" style="width:12px;"></i> {{ profile.query }}</div>
+          {% endif %}
+          {% if profile.get('category') %}
+          <div><i class="fa-solid fa-tag" style="width:12px;"></i> {{ profile.category }}</div>
+          {% endif %}
+          {% if profile.get('location') %}
+          <div><i class="fa-solid fa-location-dot" style="width:12px;"></i> {{ profile.location }}</div>
+          {% endif %}
+          {% if profile.get('remote_only') %}
+          <div><i class="fa-solid fa-wifi" style="width:12px;"></i> Remote only</div>
+          {% endif %}
+          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+            {% if 'Remotive' in profile.name %}
+            <span class="badge badge-green">Remotive — Free</span>
+            {% elif 'Muse' in profile.name %}
+            <span class="badge badge-mint">The Muse — Free</span>
+            {% else %}
+            <span class="badge badge-indigo">JSearch API</span>
+            {% endif %}
+            <!-- Status indicator shown after run -->
+            <span class="run-status" id="status-{{ loop.index }}" style="display:none;font-size:0.72rem;font-weight:600;"></span>
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -56,46 +90,54 @@
   </div>
 
   <!-- Scraper logs -->
-  <div class="card" style="margin-bottom:20px;">
+  <div class="card" style="margin-bottom:20px;" id="logs-card">
     <div class="section-header">
       <div class="section-title">Scraper Logs</div>
-      <span style="font-size:0.8rem;color:var(--text-muted);">Last 20 runs</span>
+      <span style="font-size:0.8rem;color:var(--text-muted);" id="logs-subtitle">Last 20 runs · click a row to view jobs</span>
     </div>
-    {% if logs %}
-    <div class="table-wrap" style="margin-top:12px;">
-      <table>
-        <thead>
-          <tr>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Added</th>
-            <th>Started</th>
-            <th class="hide-mobile">Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in logs %}
-          <tr>
-            <td style="font-weight:600;">{{ log.source }}</td>
-            <td>
-              <span class="badge {% if log.status == 'success' %}badge-green{% elif log.status == 'failed' %}badge-red{% else %}badge-amber{% endif %}">
-                {{ log.status }}
-              </span>
-            </td>
-            <td style="color:var(--mint);font-weight:600;">+{{ log.jobs_added }}</td>
-            <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.started_at.strftime('%b %d, %H:%M') }}</td>
-            <td class="hide-mobile" style="font-size:0.78rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.message or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div id="logs-table-wrap">
+      {% if logs %}
+      <div class="table-wrap" style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Status</th>
+              <th>Added</th>
+              <th>Started</th>
+              <th class="hide-mobile">Message</th>
+              <th>Jobs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr style="cursor:pointer;" onclick="window.location='/admin/log/{{ log.id }}/jobs'">
+              <td style="font-weight:600;">{{ log.source }}</td>
+              <td>
+                <span class="badge {% if log.status == 'success' %}badge-green{% elif log.status == 'failed' %}badge-red{% else %}badge-amber{% endif %}">
+                  {{ log.status }}
+                </span>
+              </td>
+              <td style="color:var(--mint);font-weight:600;">+{{ log.jobs_added }}</td>
+              <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.started_at.strftime('%b %d, %H:%M') }}</td>
+              <td class="hide-mobile" style="font-size:0.78rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.message or '—' }}</td>
+              <td>
+                <a href="/admin/log/{{ log.id }}/jobs" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:30px 0;">
+        <div style="font-size:32px;opacity:0.4;margin-bottom:12px;"><i class="fa-solid fa-clipboard-list"></i></div>
+        <div style="color:var(--text-muted);">No scraper runs yet. Click Run on a profile above.</div>
+      </div>
+      {% endif %}
     </div>
-    {% else %}
-    <div class="empty-state" style="padding:30px 0;">
-      <div class="empty-icon">📋</div>
-      <div>No scraper runs yet. Click Run on a profile above.</div>
-    </div>
-    {% endif %}
   </div>
 
   <!-- User management -->
@@ -121,9 +163,7 @@
           <tr>
             <td style="font-weight:600;">{{ user.name }}</td>
             <td class="hide-mobile" style="color:var(--text-muted);font-size:0.82rem;">{{ user.email }}</td>
-            <td>
-              <span class="badge {% if user.role == 'admin' %}badge-mint{% else %}badge-gray{% endif %}">{{ user.role }}</span>
-            </td>
+            <td><span class="badge {% if user.role == 'admin' %}badge-mint{% else %}badge-gray{% endif %}">{{ user.role }}</span></td>
             <td>
               <span class="badge {% if user.is_active %}badge-green{% else %}badge-red{% endif %}">
                 {{ 'Active' if user.is_active else 'Inactive' }}
@@ -151,11 +191,12 @@
 
 {% block scripts %}
 <script>
+// ── Clear fake jobs ───────────────────────────────────────────────────────────
 document.getElementById('clear-fake-btn')?.addEventListener('click', async () => {
-  if (!confirm('This will delete all fake/demo jobs (non-JSearch). Real jobs stay. Continue?')) return;
+  if (!confirm('Delete all fake/demo jobs (non-JSearch)? Real jobs stay.')) return;
   const btn = document.getElementById('clear-fake-btn');
   btn.disabled = true;
-  btn.textContent = 'Clearing…';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing…';
   try {
     const res = await fetch('/admin/clear-fake-jobs', { method: 'POST' });
     const data = await res.json();
@@ -166,8 +207,90 @@ document.getElementById('clear-fake-btn')?.addEventListener('click', async () =>
   } catch {
     showToast('Failed to clear jobs', 'error');
     btn.disabled = false;
-    btn.textContent = '🗑 Clear Fake Jobs';
+    btn.innerHTML = '<i class="fa-solid fa-trash"></i> Clear Fake Jobs';
   }
+});
+
+// ── Run scraper + auto poll for result ───────────────────────────────────────
+document.querySelectorAll('.run-scraper-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const source = btn.dataset.source;
+    const idx = btn.dataset.profileIdx;
+    const dot = document.getElementById(`dot-${idx}`);
+    const statusEl = document.getElementById(`status-${idx}`);
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i> Running…';
+    if (dot) { dot.className = 'source-dot'; dot.style.background = '#ffb400'; dot.style.boxShadow = '0 0 6px rgba(255,180,0,0.5)'; }
+    if (statusEl) { statusEl.style.display = 'inline'; statusEl.style.color = '#ffb400'; statusEl.textContent = 'Running…'; }
+
+    try {
+      const res = await fetch('/api/scraper/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Server error');
+
+      const logId = data.log_id;
+
+      // Poll every 2s for up to 60s
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        if (attempts > 30) {
+          clearInterval(poll);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-play" style="font-size:10px;"></i> Run';
+          return;
+        }
+        try {
+          const sRes = await fetch(`/api/scraper/status/${logId}`);
+          const sData = await sRes.json();
+
+          if (sData.status === 'success' || sData.status === 'failed') {
+            clearInterval(poll);
+
+            // Update dot
+            if (dot) {
+              dot.style.background = sData.status === 'success' ? '#00c864' : '#ff5555';
+              dot.style.boxShadow = sData.status === 'success' ? '0 0 6px rgba(0,200,100,0.5)' : '0 0 6px rgba(255,60,60,0.5)';
+            }
+
+            // Update status label
+            if (statusEl) {
+              statusEl.style.color = sData.status === 'success' ? '#00c864' : '#ff5555';
+              statusEl.textContent = sData.status === 'success'
+                ? `+${sData.jobs_added} jobs`
+                : 'Failed';
+            }
+
+            // Show toast
+            if (sData.status === 'success') {
+              showToast(`${source}: +${sData.jobs_added} new jobs added`, 'success');
+            } else {
+              showToast(`${source} failed: ${sData.message || 'Unknown error'}`, 'error');
+            }
+
+            // Refresh logs table
+            const logsRes = await fetch('/admin/logs-partial');
+            const logsHtml = await logsRes.text();
+            document.getElementById('logs-table-wrap').innerHTML = logsHtml;
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-play" style="font-size:10px;"></i> Run';
+          }
+        } catch { /* ignore poll errors */ }
+      }, 2000);
+
+    } catch (e) {
+      showToast(`Failed to start scraper: ${e.message}`, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-play" style="font-size:10px;"></i> Run';
+      if (dot) { dot.className = 'source-dot red'; }
+    }
+  });
 });
 </script>
 {% endblock %}
