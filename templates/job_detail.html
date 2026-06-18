@@ -3,6 +3,25 @@
 {% block page_title %}Job Detail{% endblock %}
 
 {% block content %}
+<style>
+  .job-detail-grid { display: flex; flex-direction: column; gap: 20px; }
+  .job-detail-header { overflow: hidden; }
+  .job-detail-top { display: flex; flex-wrap: wrap; gap: 12px; }
+  .job-detail-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .job-detail-actions .btn,
+  .job-detail-actions a { width: 100%; text-align: center; justify-content: center; box-sizing: border-box; }
+  .job-detail-main { min-width: 0; overflow: hidden; }
+  .job-detail-main * { max-width: 100%; word-break: break-word; overflow-wrap: anywhere; }
+  .job-detail-side { width: 100%; }
+
+  @media (min-width: 768px) {
+    .job-detail-grid { display: grid; grid-template-columns: 1fr 280px; }
+    .job-detail-actions { flex-direction: row; flex-wrap: wrap; }
+    .job-detail-actions .btn,
+    .job-detail-actions a { width: auto; }
+    .job-detail-side { position: sticky; top: 80px; }
+  }
+</style>
 <div class="job-detail-grid">
 
   <!-- Left: Job detail -->
@@ -36,7 +55,7 @@
       </div>
 
       <!-- AI Match Score Result -->
-      <div id="match-result" style="display:none;" class="card" style="margin-top:16px;border-color:rgba(0,245,170,0.2);">
+      <div id="match-result" style="display:none;margin-top:16px;border-color:rgba(0,245,170,0.2);" class="card">
       </div>
     </div>
 
