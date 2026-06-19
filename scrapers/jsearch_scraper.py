@@ -215,7 +215,7 @@ SEARCH_PROFILES = [
     {
         'name': 'Tech Jobs Nigeria',
         'query': 'software engineer developer Nigeria',
-        'location': 'Nigeria',
+        'location': '',
         'num_pages': 2,
         'date_posted': 'month',
     },
@@ -238,7 +238,7 @@ SEARCH_PROFILES = [
         'name': 'Product & Design',
         'query': 'product manager UI UX designer',
         'location': '',
-        'num_pages': 1,
+        'num_pages': 2,
         'date_posted': 'month',
     },
 ]

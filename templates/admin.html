@@ -72,7 +72,7 @@
           {% if profile.get('remote_only') %}
           <div><i class="fa-solid fa-wifi" style="width:12px;"></i> Remote only</div>
           {% endif %}
-          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="margin-top:6px;display:flex;flex-direction:row;gap:50px;align-items:center;">
             {% if 'Remotive' in profile.name %}
             <span class="badge badge-green">Remotive — Free</span>
             {% elif 'Muse' in profile.name %}

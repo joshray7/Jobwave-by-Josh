@@ -136,7 +136,6 @@ def fetch_adzuna_jobs(
         'results_per_page': 50,
         'what': keywords,
         'sort_by': 'date',
-        'sort_direction': 'decreasing',
     }
 
     time.sleep(1)  # polite delay
@@ -158,14 +157,14 @@ def fetch_adzuna_jobs(
 
 ADZUNA_PROFILES = [
     {
-        'name': 'Adzuna Nigeria — Dev',
-        'region': 'ng',
+        'name': 'Adzuna France — Dev',
+        'region': 'fr',
         'keywords': 'software engineer developer',
     },
     {
-        'name': 'Adzuna Nigeria — Data',
-        'region': 'ng',
-        'keywords': 'data scientist machine learning',
+        'name': 'Adzuna Singapore — Tech',
+        'region': 'sg',
+        'keywords': 'software engineer developer',
     },
     {
         'name': 'Adzuna Remote — Tech',
