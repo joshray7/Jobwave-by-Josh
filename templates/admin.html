@@ -41,6 +41,14 @@
         <div class="section-title">Scraper Profiles</div>
         <div class="section-sub">JSearch · Remotive · The Muse · Adzuna</div>
       </div>
+      <div style="display:flex;gap:8px;">
+        <a href="{{ url_for('find_duplicates') }}" class="btn btn-outline btn-sm">
+          <i class="fa-solid fa-copy"></i> Find Duplicates
+        </a>
+        <button class="btn btn-outline btn-sm" id="clear-fake-btn">
+          <i class="fa-solid fa-trash"></i> Clear Fake Jobs
+        </button>
+      </div>
     </div>
     <div class="scraper-profiles-grid">
       {% for profile in scraper_profiles %}

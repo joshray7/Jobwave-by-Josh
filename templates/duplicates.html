@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Duplicate Jobs{% endblock %}
+{% block page_title %}Duplicate Jobs{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Back to Admin
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-weight:800;font-size:1.1rem;">{{ groups|length }} duplicate groups found</div>
+        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">{{ total_duplicates }} extra listing{{ 's' if total_duplicates != 1 }} that could be removed</div>
+      </div>
+      {% if groups %}
+      <button class="btn btn-danger" id="auto-clean-btn">
+        <i class="fa-solid fa-broom"></i> Auto-Clean All (Keep Newest)
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if groups %}
+  {% for group in groups %}
+  <div class="card" style="margin-bottom:16px;">
+    <div style="font-weight:700;font-size:0.9rem;margin-bottom:12px;color:var(--mint);">
+      {{ group[0].title }} — {{ group[0].company }}
+      <span class="badge badge-amber" style="margin-left:8px;">{{ group|length }} copies</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for job in group %}
+      <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;">
+        <input type="checkbox" class="dup-checkbox" value="{{ job.id }}" {% if not loop.first %}checked{% endif %}>
+        <div style="flex:1;">
+          <span class="badge badge-gray">{{ job.source }}</span>
+          <span style="font-size:0.8rem;color:var(--text-muted);margin-left:8px;">Scraped {{ job.scraped_at.strftime('%b %d, %H:%M') }}</span>
+          {% if loop.first %}<span class="badge badge-green" style="margin-left:8px;">Newest</span>{% endif %}
+        </div>
+        <a href="{{ url_for('job_detail', job_id=job.id) }}" target="_blank" class="btn btn-ghost btn-sm">View</a>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div style="text-align:center;margin-top:20px;">
+    <button class="btn btn-danger" id="remove-selected-btn">
+      <i class="fa-solid fa-trash"></i> Remove Selected
+    </button>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-circle-check" style="font-size:48px;color:var(--mint);opacity:0.6;"></i></div>
+    <h3>No duplicates found</h3>
+    <p>Your job board is clean.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('remove-selected-btn')?.addEventListener('click', async () => {
+  const checked = Array.from(document.querySelectorAll('.dup-checkbox:checked')).map(c => parseInt(c.value));
+  if (checked.length === 0) { showToast('No jobs selected', 'error'); return; }
+  if (!confirm(`Remove ${checked.length} duplicate job(s)?`)) return;
+
+  try {
+    const res = await fetch('/admin/duplicates/remove', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({job_ids: checked})
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Removed ${data.deleted} duplicate(s)`, 'success');
+      setTimeout(() => location.reload(), 800);
+    }
+  } catch { showToast('Failed to remove duplicates', 'error'); }
+});
+
+document.getElementById('auto-clean-btn')?.addEventListener('click', async () => {
+  if (!confirm('Auto-clean ALL duplicates? This keeps only the newest copy of each job.')) return;
+  const btn = document.getElementById('auto-clean-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cleaning…';
+
+  try {
+    const res = await fetch('/admin/duplicates/auto-clean', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Auto-cleaned ${data.deleted} duplicate(s)`, 'success');
+      setTimeout(() => location.reload(), 1000);
+    }
+  } catch {
+    showToast('Auto-clean failed', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-broom"></i> Auto-Clean All (Keep Newest)';
+  }
+});
+</script>
+{% endblock %}

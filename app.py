@@ -1121,26 +1121,36 @@ def scraper_status(log_id):
 def scraper_log_jobs(log_id):
     log = ScraperLog.query.get_or_404(log_id)
     jobs = []
+
     if log.status == 'success' and log.jobs_added and log.jobs_added > 0:
         from datetime import timedelta
-        # Find jobs from this source scraped during this log's run window
+
+        # Map profile name -> actual Job.source value stored in DB
+        if 'Adzuna' in log.source:
+            base_source = 'Adzuna'
+        elif 'Remotive' in log.source or 'Remote' in log.source:
+            base_source = 'Remotive'
+        elif 'Muse' in log.source:
+            base_source = 'The Muse'
+        else:
+            base_source = 'JSearch'
+
         window_start = log.started_at - timedelta(seconds=5)
         window_end = (log.ended_at or log.started_at) + timedelta(seconds=60)
+
         jobs = Job.query.filter(
-            Job.source == log.source,
+            Job.source == base_source,
             Job.scraped_at >= window_start,
             Job.scraped_at <= window_end,
         ).order_by(Job.scraped_at.desc()).all()
 
-        # Fallback — if window query returns nothing, get latest jobs from source
         if not jobs:
-            jobs = Job.query.filter_by(source=log.source)\
+            jobs = Job.query.filter_by(source=base_source)\
                 .order_by(Job.scraped_at.desc())\
                 .limit(log.jobs_added)\
                 .all()
 
     return render_template('log_jobs.html', log=log, jobs=jobs)
-
 
 @app.route('/admin/users/<int:user_id>/toggle', methods=['POST'])
 @login_required
@@ -1163,6 +1173,82 @@ def toggle_job(job_id):
     db.session.commit()
     return jsonify({'active': job.is_active})
 
+
+@app.route('/admin/duplicates')
+@login_required
+@admin_required
+def find_duplicates():
+    import re
+    from collections import defaultdict
+
+    def normalize(text):
+        text = text.lower().strip()
+        text = re.sub(r'[^a-z0-9\s]', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text
+
+    all_jobs = Job.query.filter_by(is_active=True).order_by(Job.scraped_at.desc()).all()
+    groups = defaultdict(list)
+
+    for job in all_jobs:
+        key = f"{normalize(job.company)}::{normalize(job.title)}"
+        groups[key].append(job)
+
+    duplicate_groups = [jobs for jobs in groups.values() if len(jobs) > 1]
+    duplicate_groups.sort(key=lambda g: len(g), reverse=True)
+
+    total_duplicates = sum(len(g) - 1 for g in duplicate_groups)
+
+    return render_template('duplicates.html',
+        groups=duplicate_groups,
+        total_duplicates=total_duplicates)
+
+
+@app.route('/admin/duplicates/remove', methods=['POST'])
+@login_required
+@admin_required
+def remove_duplicates():
+    data = request.get_json(force=True, silent=True) or {}
+    job_ids = data.get('job_ids', [])
+    if not job_ids:
+        return jsonify({'success': False, 'message': 'No jobs selected'}), 400
+
+    deleted = Job.query.filter(Job.id.in_(job_ids)).delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify({'success': True, 'deleted': deleted})
+
+
+@app.route('/admin/duplicates/auto-clean', methods=['POST'])
+@login_required
+@admin_required
+def auto_clean_duplicates():
+    import re
+    from collections import defaultdict
+
+    def normalize(text):
+        text = text.lower().strip()
+        text = re.sub(r'[^a-z0-9\s]', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text
+
+    all_jobs = Job.query.filter_by(is_active=True).order_by(Job.scraped_at.desc()).all()
+    groups = defaultdict(list)
+
+    for job in all_jobs:
+        key = f"{normalize(job.company)}::{normalize(job.title)}"
+        groups[key].append(job)
+
+    deleted_count = 0
+    for jobs in groups.values():
+        if len(jobs) > 1:
+            # Keep the newest, delete the rest
+            jobs_sorted = sorted(jobs, key=lambda j: j.scraped_at, reverse=True)
+            for old_job in jobs_sorted[1:]:
+                db.session.delete(old_job)
+                deleted_count += 1
+
+    db.session.commit()
+    return jsonify({'success': True, 'deleted': deleted_count})
 
 # ─── API Endpoints ─────────────────────────────────────────────────────────────
 
