@@ -4,10 +4,14 @@
 :root {
   --indigo: #3b00ff;
   --mint: #00c88a;
+  --violet: #a000ff;
+  --pink: #ff00c8;
   --indigo-dim: rgba(59,0,255,0.1);
   --mint-dim: rgba(0,200,138,0.1);
   --indigo-glow: rgba(59,0,255,0.3);
   --mint-glow: rgba(0,200,138,0.3);
+  --violet-glow: rgba(160,0,255,0.3);
+  --pink-glow: rgba(255,0,200,0.3);
   --bg: #050510;
   --bg2: #080818;
   --surface: #0d0d24;
@@ -133,7 +137,7 @@ a:hover { color: #fff; }
 /* ── Sidebar ── */
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
@@ -168,7 +172,18 @@ a:hover { color: #fff; }
 .logo-text { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
 .logo-text span { color: var(--mint); }
 
-.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--indigo); border-radius: 3px; }
 
 .nav-section-label {
   font-size: 10px;
@@ -1483,3 +1498,11 @@ tr[onclick]:hover td { background: var(--indigo-dim); }
   --col-red: #ff5555;
   --col-red-dim: rgba(255,85,85,0.1);
 }
+
+
+
+
+
+
+
+.sidebar-nav

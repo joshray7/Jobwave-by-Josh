@@ -128,6 +128,10 @@ def fetch_muse_jobs(
         'data science': ['data', 'scientist', 'analyst', 'machine learning', 'ai '],
         'design': ['design', 'ux', 'ui', 'product design'],
         'product': ['product manager', 'product owner', 'pm '],
+        'marketing': ['marketing', 'growth', 'seo', 'content'],
+        'remote': ['remote', 'distributed', 'work from home'],
+        'qa': ['qa', 'quality assurance', 'tester', 'testing'],
+        'uncategorized': [],
     }
     keywords = keyword_map.get(category.lower(), category.lower().split())
 
@@ -189,6 +193,26 @@ MUSE_PROFILES = [
     {
         'name': 'Muse Product',
         'category': 'Product',
+        'num_pages': 3,
+    },
+    {
+        'name': 'Muse Marketing',
+        'category': 'Marketing',
+        'num_pages': 3,
+    },
+    {
+        'name': 'Muse Remote',
+        'category': 'Engineering',
+        'num_pages': 3,
+    },
+    {
+        'name': 'Muse QA & Testing',
+        'category': 'QA',
+        'num_pages': 3,
+    },
+    {
+        'name': 'Muse Uncategorized',
+        'category': 'Uncategorized',
         'num_pages': 3,
     },
 ]
