@@ -216,7 +216,7 @@ SEARCH_PROFILES = [
         'name': 'Tech Jobs Nigeria',
         'query': 'software engineer developer Nigeria',
         'location': '',
-        'num_pages': 2,
+        'num_pages': 1,
         'date_posted': 'month',
     },
     {
@@ -224,14 +224,7 @@ SEARCH_PROFILES = [
         'query': 'software developer remote Africa',
         'location': '',
         'remote_only': True,
-        'num_pages': 2,
-        'date_posted': 'month',
-    },
-    {
-        'name': 'Data & AI Roles',
-        'query': 'data scientist machine learning AI engineer',
-        'location': '',
-        'num_pages': 2,
+        'num_pages': 1,
         'date_posted': 'month',
     },
     {
@@ -241,6 +234,28 @@ SEARCH_PROFILES = [
         'num_pages': 2,
         'date_posted': 'month',
     },
+    {
+        'name': 'Frontend & Mobile',
+        'query': 'frontend developer mobile app react native flutter',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Backend & DevOps',
+        'query': 'backend developer devops cloud engineer',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'AI & Machine Learning',
+        'query': 'Data Scientist Machine learning engineer LLM generative AI',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+
 ]
 
 

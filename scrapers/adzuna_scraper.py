@@ -174,8 +174,14 @@ ADZUNA_PROFILES = [
     {
         'name': 'Adzuna UK — Tech',
         'region': 'gb',
-        'keywords': 'developer engineer',
+        'keywords': 'developer software engineer',
     },
+    {
+        'name': 'Adzuna AI & ML — Tech',
+        'region': 'us',
+        'keywords': 'machine learning AI data scientist engineer developer python tensorflow pytorch generative ai',
+    },
+
 ]
 
 

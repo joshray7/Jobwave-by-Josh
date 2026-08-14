@@ -39,7 +39,7 @@
     <div class="section-header">
       <div>
         <div class="section-title">Scraper Profiles</div>
-        <div class="section-sub">JSearch · Remotive · The Muse</div>
+        <div class="section-sub">JSearch · Remotive · The Muse · Adzuna</div>
       </div>
       <button class="btn btn-danger btn-sm" id="clear-fake-btn">
         <i class="fa-solid fa-trash"></i> Clear Fake Jobs
@@ -73,10 +73,12 @@
           <div><i class="fa-solid fa-wifi" style="width:12px;"></i> Remote only</div>
           {% endif %}
           <div style="margin-top:6px;display:flex;flex-direction:row;gap:50px;align-items:center;">
-            {% if 'Remotive' in profile.name %}
-            <span class="badge badge-green">Remotive — Free</span>
-            {% elif 'Muse' in profile.name %}
+            {% if profile.get('category') and 'Muse' in profile.name %}
             <span class="badge badge-mint">The Muse — Free</span>
+            {% elif profile.get('category') %}
+            <span class="badge badge-green">Remotive — Free</span>
+            {% elif 'Adzuna' in profile.name %}
+            <span class="badge badge-amber">Adzuna API</span>
             {% else %}
             <span class="badge badge-indigo">JSearch API</span>
             {% endif %}

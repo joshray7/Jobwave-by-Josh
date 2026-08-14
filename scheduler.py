@@ -26,7 +26,7 @@ def run_daily_scraper(app):
         logger.info("Scheduler: starting daily scrape...")
 
         def run_profile(profile_name, fetch_fn, kwargs):
-            log = ScraperLog(source=profile_name, status='running')
+            log = ScraperLog(source =profile_name, status ='running')
             db.session.add(log)
             db.session.commit()
             try:

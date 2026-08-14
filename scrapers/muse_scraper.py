@@ -121,30 +121,33 @@ def fetch_muse_jobs(
     page: int = 1,
     num_pages: int = 2,
 ) -> list[dict]:
-    """
-    Fetch jobs from The Muse API (no key needed).
 
-    Args:
-        category:  Job category (Engineering, Data Science, Design, Product, etc.)
-        page:      Starting page number
-        num_pages: Number of pages to fetch (20 jobs per page)
-
-    Returns:
-        List of job dicts ready for insertion into the Job model.
-    """
     all_jobs = []
+    keyword_map = {
+        'engineering': ['engineer', 'developer', 'software', 'backend', 'frontend', 'fullstack', 'devops'],
+        'data science': ['data', 'scientist', 'analyst', 'machine learning', 'ai '],
+        'design': ['design', 'ux', 'ui', 'product design'],
+        'product': ['product manager', 'product owner', 'pm '],
+    }
+    keywords = keyword_map.get(category.lower(), category.lower().split())
 
     for p in range(page, page + num_pages):
         params = {
-            'category': category,
             'page': p,
             'descending': 'true',
         }
 
         time.sleep(1)  # polite delay
 
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.themuse.com/',
+        }
+
         try:
-            resp = requests.get(MUSE_BASE, params=params, timeout=15)
+            resp = requests.get(MUSE_BASE, params=params, headers=headers, timeout=15)
             resp.raise_for_status()
             data = resp.json()
             results = data.get('results', [])
@@ -152,6 +155,9 @@ def fetch_muse_jobs(
                 break
             for item in results:
                 try:
+                    title = item.get('name', '').lower()
+                    if keywords and not any(kw in title for kw in keywords):
+                        continue
                     all_jobs.append(parse_muse_job(item))
                 except Exception:
                     continue
@@ -162,29 +168,28 @@ def fetch_muse_jobs(
 
     return all_jobs
 
-
 # ─── Search profiles ──────────────────────────────────────────────────────────
 
 MUSE_PROFILES = [
     {
         'name': 'Muse Engineering',
         'category': 'Engineering',
-        'num_pages': 2,
+        'num_pages': 3,
     },
     {
         'name': 'Muse Data Science',
         'category': 'Data Science',
-        'num_pages': 1,
+        'num_pages': 3,
     },
     {
         'name': 'Muse Design',
         'category': 'Design',
-        'num_pages': 1,
+        'num_pages': 3,
     },
     {
         'name': 'Muse Product',
         'category': 'Product',
-        'num_pages': 1,
+        'num_pages': 3,
     },
 ]
 

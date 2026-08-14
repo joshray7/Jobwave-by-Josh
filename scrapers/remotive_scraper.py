@@ -138,8 +138,16 @@ def fetch_remotive_jobs(
 
     time.sleep(1)  # polite delay
 
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://remotive.com/',
+        'Origin': 'https://remotive.com',
+    }
+
     try:
-        resp = requests.get(REMOTIVE_BASE, params=params, timeout=15)
+        resp = requests.get(REMOTIVE_BASE, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         jobs = data.get('jobs', [])
@@ -162,21 +170,39 @@ REMOTIVE_PROFILES = [
     {
         'name': 'Remote DevOps & Cloud',
         'category': 'devops',
-        'limit': 15,
+        'limit': 20,
         'search': '',
     },
     {
         'name': 'Remote Data & AI',
         'category': 'data',
-        'limit': 15,
+        'limit': 20,
         'search': '',
     },
     {
         'name': 'Remote Design Jobs',
         'category': 'design',
-        'limit': 15,
+        'limit': 20,
         'search': '',
     },
+    {
+        'name': 'Remote Marketing Jobs',
+        'category': 'marketing',
+        'limit': 20,
+        'search': '',
+    },
+    {
+        'name': 'Remote Product Jobs',
+        'category': 'product',
+        'limit': 20,
+        'search': '',
+    },
+    {
+        'name': 'Remote QA & Testing',
+        'category': 'qa',
+        'limit': 20,
+        'search': '',
+    },  
 ]
 
 
