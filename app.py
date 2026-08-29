@@ -1213,9 +1213,22 @@ def remove_duplicates():
     if not job_ids:
         return jsonify({'success': False, 'message': 'No jobs selected'}), 400
 
-    deleted = Job.query.filter(Job.id.in_(job_ids)).delete(synchronize_session=False)
+    deleted = 0
+    skipped = 0
+    for job_id in job_ids:
+        has_saved = SavedJob.query.filter_by(job_id=job_id).first()
+        has_applied = Application.query.filter_by(job_id=job_id).first()
+        if has_saved or has_applied:
+            job = Job.query.get(job_id)
+            if job:
+                job.is_active = False
+            skipped += 1
+            continue
+        Job.query.filter_by(id=job_id).delete()
+        deleted += 1
+
     db.session.commit()
-    return jsonify({'success': True, 'deleted': deleted})
+    return jsonify({'success': True, 'deleted': deleted, 'skipped': skipped})
 
 
 @app.route('/admin/duplicates/auto-clean', methods=['POST'])
@@ -1239,16 +1252,24 @@ def auto_clean_duplicates():
         groups[key].append(job)
 
     deleted_count = 0
+    skipped_count = 0
+
     for jobs in groups.values():
         if len(jobs) > 1:
-            # Keep the newest, delete the rest
             jobs_sorted = sorted(jobs, key=lambda j: j.scraped_at, reverse=True)
             for old_job in jobs_sorted[1:]:
+                # Skip jobs that users have saved or applied to — deleting would break their history
+                has_saved = SavedJob.query.filter_by(job_id=old_job.id).first()
+                has_applied = Application.query.filter_by(job_id=old_job.id).first()
+                if has_saved or has_applied:
+                    old_job.is_active = False  # hide it instead of deleting
+                    skipped_count += 1
+                    continue
                 db.session.delete(old_job)
                 deleted_count += 1
 
     db.session.commit()
-    return jsonify({'success': True, 'deleted': deleted_count})
+    return jsonify({'success': True, 'deleted': deleted_count, 'skipped': skipped_count})
 
 # ─── API Endpoints ─────────────────────────────────────────────────────────────
 
