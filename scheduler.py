@@ -142,6 +142,28 @@ def run_alert_emails(app):
                 except Exception as e:
                     logger.error(f"Alert email failed for {user.email}: {e}")
 
+def run_job_expiry(app):
+    """Mark jobs older than 30 days as inactive — runs daily."""
+    with app.app_context():
+        from app import db, Job
+        from datetime import datetime, timedelta
+
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        chunk_size = 25
+
+        old_job_ids = [r[0] for r in db.session.query(Job.id)
+                       .filter(Job.is_active == True, Job.scraped_at < cutoff).all()]
+
+        expired_count = 0
+        for i in range(0, len(old_job_ids), chunk_size):
+            chunk = old_job_ids[i:i + chunk_size]
+            db.session.query(Job).filter(Job.id.in_(chunk))\
+                .update({Job.is_active: False}, synchronize_session=False)
+            db.session.commit()
+            expired_count += len(chunk)
+
+        logger.info(f"Job expiry: {expired_count} jobs marked inactive (older than 30 days)")
+
 
 def init_scheduler(app):
     """Start the scheduler. Call once at app startup."""
@@ -168,5 +190,15 @@ def init_scheduler(app):
         replace_existing=True,
     )
 
+    # Job expiry — mark jobs older than 30 days inactive, runs at 1am Lagos time
+    scheduler.add_job(
+        func=run_job_expiry,
+        args=[app],
+        trigger=CronTrigger(hour=1, minute=0),
+        id='job_expiry',
+        name='Job Auto-Expiry',
+        replace_existing=True,
+    )
+
     scheduler.start()
-    logger.info("JobWave scheduler started — daily scrape at midnight, alerts at 8am (Lagos)")
+    logger.info("JobWave scheduler started — daily scrape at midnight, expiry at 1am, alerts at 8am (Lagos)")

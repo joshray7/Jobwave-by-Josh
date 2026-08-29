@@ -179,7 +179,7 @@ ADZUNA_PROFILES = [
     {
         'name': 'Adzuna AI & ML — Tech',
         'region': 'us',
-        'keywords': 'machine learning AI data scientist engineer developer python tensorflow pytorch generative ai',
+        'keywords': 'machine learning AI engineer  generative ai',
     },
 
 ]
