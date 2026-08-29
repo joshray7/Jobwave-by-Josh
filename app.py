@@ -1237,6 +1237,7 @@ def remove_duplicates():
 def auto_clean_duplicates():
     import re
     from collections import defaultdict
+    from sqlalchemy.exc import IntegrityError
 
     def normalize(text):
         text = text.lower().strip()
@@ -1244,31 +1245,43 @@ def auto_clean_duplicates():
         text = re.sub(r'\s+', ' ', text)
         return text
 
-    all_jobs = Job.query.filter_by(is_active=True).order_by(Job.scraped_at.desc()).all()
-    groups = defaultdict(list)
+    all_jobs = db.session.query(Job.id, Job.company, Job.title, Job.scraped_at)\
+        .filter_by(is_active=True).all()
 
-    for job in all_jobs:
-        key = f"{normalize(job.company)}::{normalize(job.title)}"
-        groups[key].append(job)
+    groups = defaultdict(list)
+    for job_id, company, title, scraped_at in all_jobs:
+        key = f"{normalize(company)}::{normalize(title)}"
+        groups[key].append((job_id, scraped_at))
+
+    ids_to_delete = []
+    for jobs in groups.values():
+        if len(jobs) > 1:
+            jobs_sorted = sorted(jobs, key=lambda j: j[1], reverse=True)
+            ids_to_delete.extend(job_id for job_id, _ in jobs_sorted[1:])
 
     deleted_count = 0
     skipped_count = 0
+    chunk_size = 25
 
-    for jobs in groups.values():
-        if len(jobs) > 1:
-            jobs_sorted = sorted(jobs, key=lambda j: j.scraped_at, reverse=True)
-            for old_job in jobs_sorted[1:]:
-                # Skip jobs that users have saved or applied to — deleting would break their history
-                has_saved = SavedJob.query.filter_by(job_id=old_job.id).first()
-                has_applied = Application.query.filter_by(job_id=old_job.id).first()
-                if has_saved or has_applied:
-                    old_job.is_active = False  # hide it instead of deleting
+    for i in range(0, len(ids_to_delete), chunk_size):
+        chunk = ids_to_delete[i:i + chunk_size]
+        try:
+            db.session.query(Job).filter(Job.id.in_(chunk)).delete(synchronize_session=False)
+            db.session.commit()
+            deleted_count += len(chunk)
+        except IntegrityError:
+            db.session.rollback()
+            for job_id in chunk:
+                try:
+                    db.session.query(Job).filter_by(id=job_id).delete()
+                    db.session.commit()
+                    deleted_count += 1
+                except IntegrityError:
+                    db.session.rollback()
+                    db.session.query(Job).filter_by(id=job_id).update({'is_active': False})
+                    db.session.commit()
                     skipped_count += 1
-                    continue
-                db.session.delete(old_job)
-                deleted_count += 1
 
-    db.session.commit()
     return jsonify({'success': True, 'deleted': deleted_count, 'skipped': skipped_count})
 
 # ─── API Endpoints ─────────────────────────────────────────────────────────────
@@ -1298,3 +1311,13 @@ if __name__ == '__main__':
     from scheduler import init_scheduler
     init_scheduler(app)
     app.run(debug=True, port=5003)
+
+
+
+
+
+
+
+
+
+
