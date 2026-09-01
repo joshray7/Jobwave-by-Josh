@@ -118,7 +118,6 @@ def parse_job(item: dict) -> dict:
         'scraped_at': datetime.utcnow(),
     }
 
-
 # ─── Main fetch function ───────────────────────────────────────────────────────
 
 def fetch_jsearch_jobs(
@@ -215,14 +214,14 @@ SEARCH_PROFILES = [
     {
         'name': 'Tech Jobs Nigeria',
         'query': 'software engineer developer Nigeria',
-        'location': '',
+        'location': 'NG',
         'num_pages': 1,
         'date_posted': 'month',
     },
     {
         'name': 'Remote Tech (Africa)',
         'query': 'software developer remote Africa',
-        'location': '',
+        'location': 'AFRICA',
         'remote_only': True,
         'num_pages': 1,
         'date_posted': 'month',
@@ -230,7 +229,7 @@ SEARCH_PROFILES = [
     {
         'name': 'Product & Design',
         'query': 'product manager UI UX designer',
-        'location': '',
+        'location': 'GLOBAL',
         'num_pages': 2,
         'date_posted': 'month',
     },
@@ -244,17 +243,43 @@ SEARCH_PROFILES = [
     {
         'name': 'Backend & DevOps',
         'query': 'backend developer devops cloud engineer',
-        'location': '',
+        'location': 'GLOBAL',
         'num_pages': 1,
         'date_posted': 'month',
     },
     {
         'name': 'AI & Machine Learning',
-        'query': 'Data Scientist Machine learning engineer LLM generative AI',
-        'location': '',
+        'query': 'machine learning engineer AI agent LLM generative AI nigeria',
+        'location': 'NIGERIA',
         'num_pages': 1,
         'date_posted': 'month',
     },
+
+    {
+        'name': 'Remote Tech (Global)',
+        'query': 'software developer remote global',
+        'location': 'GLOBAL',
+        'remote_only': True,
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+
+    {
+        'name': 'Remote AI & ML (Global)',
+        'query': 'machine learning engineer AI agent LLM generative AI',
+        'location': '',
+        'remote_only': True,
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+
+    {
+        'name': 'Data Science & Analytics',
+        'query': 'data scientist data analyst analytics engineer',
+        'location': 'GLOBAL',
+        'num_pages': 1,
+        'date_posted': 'month',
+    }
 
 ]
 

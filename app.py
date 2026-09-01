@@ -987,6 +987,49 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                     )
 
             if not profile_found:
+                from scrapers.adzuna_scraper import get_adzuna_profile, fetch_adzuna_jobs
+                adzuna_profile = get_adzuna_profile(profile_name)
+                if adzuna_profile:
+                    profile_found = True
+                    jobs_data = fetch_adzuna_jobs(
+                        region=adzuna_profile.get('region', 'ng'),
+                        keywords=adzuna_profile.get('keywords', 'developer'),
+                        page=1,
+                    )
+
+            if not profile_found:
+                from scrapers.myjobmag_scraper import get_myjobmag_profile, fetch_myjobmag_jobs
+                myjobmag_profile = get_myjobmag_profile(profile_name)
+                if myjobmag_profile:
+                    profile_found = True
+                    jobs_data = fetch_myjobmag_jobs(
+                        category=myjobmag_profile.get('category'),
+                        num_pages=myjobmag_profile.get('num_pages', 1),
+                    )
+
+            if not profile_found:
+                from scrapers.hotnigerianjobs_scraper import get_hotnigerianjobs_profile, fetch_hotnigerianjobs_jobs
+                hnj_profile = get_hotnigerianjobs_profile(profile_name)
+                if hnj_profile:
+                    profile_found = True
+                    jobs_data = fetch_hotnigerianjobs_jobs(
+                        field_id=hnj_profile.get('field_id'),
+                        industry_id=hnj_profile.get('industry_id'),
+                        num_pages=hnj_profile.get('num_pages', 1),
+                    )
+
+            if not profile_found:
+                from scrapers.jobberman_scraper import get_jobberman_profile, fetch_jobberman_jobs
+                jobberman_profile = get_jobberman_profile(profile_name)
+                if jobberman_profile:
+                    profile_found = True
+                    jobs_data = fetch_jobberman_jobs(
+                        category_path=jobberman_profile.get('category_path'),
+                        num_pages=jobberman_profile.get('num_pages', 1),
+                    )
+
+           
+            if not profile_found:
                 raise ValueError(f"Unknown profile: {profile_name}")
 
             added = 0
@@ -1077,7 +1120,10 @@ def admin():
     from scrapers.remotive_scraper import REMOTIVE_PROFILES
     from scrapers.muse_scraper import MUSE_PROFILES
     from scrapers.adzuna_scraper import ADZUNA_PROFILES
-    all_profiles = JSEARCH_PROFILES + REMOTIVE_PROFILES + MUSE_PROFILES + ADZUNA_PROFILES
+    from scrapers.myjobmag_scraper import MYJOBMAG_PROFILES
+    from scrapers.hotnigerianjobs_scraper import HOTNIGERIANJOBS_PROFILES
+    from scrapers.jobberman_scraper import JOBBERMAN_PROFILES
+    all_profiles = JSEARCH_PROFILES + REMOTIVE_PROFILES + MUSE_PROFILES + ADZUNA_PROFILES + MYJOBMAG_PROFILES + HOTNIGERIANJOBS_PROFILES + JOBBERMAN_PROFILES
     users = User.query.order_by(User.created_at.desc()).all()
     logs = ScraperLog.query.order_by(ScraperLog.started_at.desc()).limit(20).all()
     total_jobs = Job.query.count()
@@ -1132,6 +1178,12 @@ def scraper_log_jobs(log_id):
             base_source = 'Remotive'
         elif 'Muse' in log.source:
             base_source = 'The Muse'
+        elif 'MyJobMag' in log.source:
+            base_source = 'MyJobmag'
+        elif 'HotNigerianJobs' in log.source:
+            base_source = 'HotNigerianJobs'
+        elif 'Jobberman' in log.source:
+            base_source = 'Jobberman'
         else:
             base_source = 'JSearch'
 

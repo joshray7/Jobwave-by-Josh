@@ -12,3 +12,4 @@ psycopg2-binary
 resend
 apscheduler
 itsdangerous
+python-dateutil

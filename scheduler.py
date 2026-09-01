@@ -21,12 +21,15 @@ def run_daily_scraper(app):
         from scrapers.remotive_scraper import fetch_remotive_jobs, REMOTIVE_PROFILES
         from scrapers.muse_scraper import fetch_muse_jobs, MUSE_PROFILES
         from scrapers.adzuna_scraper import fetch_adzuna_jobs, ADZUNA_PROFILES
+        from scrapers.myjobmag_scraper import fetch_myjobmag_jobs, MYJOBMAG_PROFILES
+        from scrapers.hotnigerianjobs_scraper import fetch_hotnigerianjobs_jobs, HOTNIGERIANJOBS_PROFILES
+        from scrapers.jobberman_scraper import fetch_jobberman_jobs, JOBBERMAN_PROFILES
         from datetime import datetime
 
         logger.info("Scheduler: starting daily scrape...")
 
         def run_profile(profile_name, fetch_fn, kwargs):
-            log = ScraperLog(source =profile_name, status ='running')
+            log = ScraperLog(source=profile_name, status='running')
             db.session.add(log)
             db.session.commit()
             try:
@@ -82,6 +85,27 @@ def run_daily_scraper(app):
                 'page': 1,
             })
 
+        # MyJobMag profiles
+        for p in MYJOBMAG_PROFILES:
+            run_profile(p['name'], fetch_myjobmag_jobs, {
+                'category': p.get('category'),
+                'num_pages': p.get('num_pages', 1),
+            })
+
+        # HotNigerianJobs profiles
+        for p in HOTNIGERIANJOBS_PROFILES:
+            run_profile(p['name'], fetch_hotnigerianjobs_jobs, {
+                'field_id': p.get('field_id'),
+                'industry_id': p.get('industry_id'),
+                'num_pages': p.get('num_pages', 1),
+            })
+
+        # Jobberman profiles
+        for p in JOBBERMAN_PROFILES:
+            run_profile(p['name'], fetch_jobberman_jobs, {
+                'category_path': p.get('category_path'),
+                'num_pages': p.get('num_pages', 1),
+            })
 
 def run_alert_emails(app):
     """Send job alert emails to users with active alerts."""
@@ -180,7 +204,7 @@ def init_scheduler(app):
         replace_existing=True,
     )
 
-    # Alert emails every morning at 8am Lagos time
+        # Alert emails every morning at 8am Lagos time
     scheduler.add_job(
         func=run_alert_emails,
         args=[app],

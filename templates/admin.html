@@ -39,7 +39,7 @@
     <div class="section-header">
       <div>
         <div class="section-title">Scraper Profiles</div>
-        <div class="section-sub">JSearch · Remotive · The Muse · Adzuna</div>
+        <div class="section-sub">JSearch · Remotive · The Muse · Adzuna · MyJobmag · HotNigerianJobs · Jobberman</div>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="{{ url_for('find_duplicates') }}" class="btn btn-outline btn-sm">
@@ -84,6 +84,12 @@
             <span class="badge badge-green">Remotive — Free</span>
             {% elif 'Adzuna' in profile.name %}
             <span class="badge badge-amber">Adzuna API</span>
+            {% elif 'MyJobMag' in profile.name %}
+            <span class="badge badge-orange">MyJobMag — Scraped</span>
+            {% elif 'HotNigerianJobs' in profile.name %}
+            <span class="badge badge-orange">HotNigerianJobs — Scraped</span>
+            {% elif 'Jobberman' in profile.name %}
+            <span class="badge badge-orange">Jobberman — Scraped</span>
             {% else %}
             <span class="badge badge-indigo">JSearch API</span>
             {% endif %}
