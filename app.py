@@ -120,6 +120,7 @@ class Job(db.Model):
     scraped_at = db.Column(db.DateTime, default=datetime.utcnow)
     posted_at = db.Column(db.DateTime)
     views = db.Column(db.Integer, default=0)
+    posted_to_whatsapp = db.Column(db.Boolean, default=False)
 
 
 class SavedJob(db.Model):
@@ -1225,20 +1226,35 @@ def toggle_job(job_id):
     db.session.commit()
     return jsonify({'active': job.is_active})
 
+@app.route('/api/jobs/<int:job_id>/mark-posted', methods=['POST'])
+@login_required
+@admin_required
+def mark_job_posted(job_id):
+    job = Job.query.get_or_404(job_id)
+    job.posted_to_whatsapp = not job.posted_to_whatsapp
+    db.session.commit()
+    return jsonify({'success': True, 'posted': job.posted_to_whatsapp})
+
 @app.route('/admin/whatsapp-digest')
 @login_required
 @admin_required
 def whatsapp_digest():
     from datetime import timedelta
     hours = request.args.get('hours', 24, type=int)
+    show_all = request.args.get('show_all', '0') == '1'
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
     NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
 
-    jobs = Job.query.filter(
+    query = Job.query.filter(
         Job.is_active == True,
         Job.scraped_at >= cutoff,
-    ).order_by(Job.scraped_at.desc()).limit(40).all()
+    )
+    if not show_all:
+        query = query.filter(Job.posted_to_whatsapp == False)
+
+    total_matching = query.count()
+    jobs = query.order_by(Job.scraped_at.desc()).limit(300).all()
 
     job_messages = []
     for j in jobs:
@@ -1247,7 +1263,8 @@ def whatsapp_digest():
         msg = f"{flag} *{j.title}*\n🏢 {j.company}\n📍 {j.location}\n🔗 {internal_url}\n\n_via JobWave 🌊_"
         job_messages.append({'job': j, 'message': msg})
 
-    return render_template('whatsapp_digest.html', job_messages=job_messages, hours=hours)
+    return render_template('whatsapp_digest.html', job_messages=job_messages, hours=hours,
+                           total_matching=total_matching, show_all=show_all)
 
 @app.route('/admin/duplicates')
 @login_required
