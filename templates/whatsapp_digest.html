@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}WhatsApp Digest{% endblock %}
+{% block page_title %}WhatsApp Digest{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Back to Admin
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="stagger">
+
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-weight:800;font-size:1.1rem;">{{ job_messages|length }} jobs found</div>
+        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">🇳🇬 Nigerian + 🌍 International — last {{ hours }}h — links point to JobWave</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="{{ url_for('whatsapp_digest', hours=24) }}" class="btn btn-outline btn-sm {% if hours == 24 %}btn-primary{% endif %}">24h</a>
+        <a href="{{ url_for('whatsapp_digest', hours=72) }}" class="btn btn-outline btn-sm {% if hours == 72 %}btn-primary{% endif %}">3 days</a>
+        <a href="{{ url_for('whatsapp_digest', hours=168) }}" class="btn btn-outline btn-sm {% if hours == 168 %}btn-primary{% endif %}">1 week</a>
+      </div>
+    </div>
+  </div>
+
+  {% if job_messages %}
+  <div class="card" style="margin-bottom:20px;background:var(--indigo-dim);">
+    <div style="font-size:0.85rem;color:var(--text-dim);">
+      <i class="fa-brands fa-whatsapp" style="color:var(--mint);"></i>
+      Post each job as its <strong>own message</strong> — click Copy on a job, paste into your WhatsApp Channel, send, then move to the next.
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;" id="job-list">
+    {% for item in job_messages %}
+    <div class="job-card digest-card" id="digest-{{ item.job.id }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px;">
+          {{ '🇳🇬 Nigeria' if item.job.source in ['MyJobMag','HotNigerianJobs','Jobberman'] else '🌍 International' }}
+          · <span class="badge badge-gray">{{ item.job.source }}</span>
+        </div>
+        <div style="font-weight:700;font-size:0.9rem;">{{ item.job.title }}</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">{{ item.job.company }} — {{ item.job.location }}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-outline btn-sm copy-job-btn" data-job-id="{{ item.job.id }}">
+          <i class="fa-solid fa-copy"></i> Copy
+        </button>
+        <button class="btn btn-ghost btn-sm mark-posted-btn" data-job-id="{{ item.job.id }}" title="Mark as posted">
+          <i class="fa-regular fa-square"></i>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card" style="opacity:0.8;">
+    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Need everything in one block instead (e.g. to paste into a doc)?</div>
+    <button class="btn btn-outline btn-sm" id="copy-all-btn">
+      <i class="fa-solid fa-copy"></i> Copy All as One Block
+    </button>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fa-brands fa-whatsapp" style="font-size:48px;opacity:0.4;"></i></div>
+    <h3>No jobs in this window</h3>
+    <p>Try a longer time range, or run the scrapers first from Admin.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobMessages = {
+  {% for item in job_messages %}
+  {{ item.job.id }}: {{ item.message|tojson }},
+  {% endfor %}
+};
+
+document.querySelectorAll('.copy-job-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const msg = jobMessages[btn.dataset.jobId];
+    try {
+      await navigator.clipboard.writeText(msg);
+      showToast('Copied — paste and send as its own message', 'success');
+    } catch {
+      showToast('Copy failed', 'error');
+    }
+  });
+});
+
+document.querySelectorAll('.mark-posted-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const card = document.getElementById(`digest-${btn.dataset.jobId}`);
+    const icon = btn.querySelector('i');
+    const isDone = icon.classList.contains('fa-square-check');
+    if (isDone) {
+      icon.className = 'fa-regular fa-square';
+      card.style.opacity = '1';
+    } else {
+      icon.className = 'fa-solid fa-square-check';
+      icon.style.color = 'var(--mint)';
+      card.style.opacity = '0.5';
+    }
+  });
+});
+
+document.getElementById('copy-all-btn')?.addEventListener('click', async () => {
+  const text = Object.values(jobMessages).join('\n\n———\n\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('All jobs copied as one block', 'success');
+  } catch {
+    showToast('Copy failed', 'error');
+  }
+});
+</script>
+{% endblock %}

@@ -86,8 +86,8 @@ def parse_job_card(title_tag):
     """Given a job title <a> tag, extract the surrounding job card details."""
     try:
         href = title_tag.get('href', '')
-        title = title_tag.get_text(strip=True)
-        if not href or not title or title.lower() == 'apply now':
+        title_full = title_tag.get_text(strip=True)
+        if not href or not title_full or title_full.lower() == 'apply now':
             return None
 
         container = title_tag.find_parent(['div', 'article']) or title_tag.parent
@@ -104,14 +104,30 @@ def parse_job_card(title_tag):
                 posted_at = parse_date(date_match.group(1))
 
             p_tag = container.find('p')
-            description = p_tag.get_text(strip=True) if p_tag else full_text[:600]
+            description = p_tag.get_text(strip=True) if p_tag else full_text
+
+            # Strip repeated title, "Posted on..." line, and comment-count noise
+            description = description.replace(title_full, '').strip()
+            description = re.sub(
+                r'Posted on\s+[A-Za-z]{3}\s+\d{1,2}\w{0,2}\s+[A-Za-z]+,?\s+\d{4}\s*-\s*hotnigerianjobs\.com',
+                '', description
+            )
+            description = re.sub(r'---\s*\(\d+\s*comments?\)', '', description)
+            description = re.sub(r'\s{2,}', ' ', description).strip()
 
         full_url = href if href.startswith('http') else f"{HNJ_BASE}{href}"
-        combined_text = f"{title} {description}"
 
+        # Titles follow the pattern "Job Title at Company Name" — split on the last ' at '
+        title = title_full
         company = 'Unknown'
-        if ' is recruiting' in description:
+        if ' at ' in title_full:
+            title_part, company_part = title_full.rsplit(' at ', 1)
+            title = title_part.strip()
+            company = company_part.strip()
+        elif ' is recruiting' in description:
             company = description.split(' is recruiting')[0].strip()
+
+        combined_text = f"{title} {description}"
 
         return {
             'title': title,

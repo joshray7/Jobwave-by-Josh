@@ -1225,6 +1225,29 @@ def toggle_job(job_id):
     db.session.commit()
     return jsonify({'active': job.is_active})
 
+@app.route('/admin/whatsapp-digest')
+@login_required
+@admin_required
+def whatsapp_digest():
+    from datetime import timedelta
+    hours = request.args.get('hours', 24, type=int)
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+    NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
+
+    jobs = Job.query.filter(
+        Job.is_active == True,
+        Job.scraped_at >= cutoff,
+    ).order_by(Job.scraped_at.desc()).limit(40).all()
+
+    job_messages = []
+    for j in jobs:
+        internal_url = url_for('job_detail', job_id=j.id, _external=True)
+        flag = "🇳🇬" if j.source in NIGERIAN_SOURCES else "🌍"
+        msg = f"{flag} *{j.title}*\n🏢 {j.company}\n📍 {j.location}\n🔗 {internal_url}\n\n_via JobWave 🌊_"
+        job_messages.append({'job': j, 'message': msg})
+
+    return render_template('whatsapp_digest.html', job_messages=job_messages, hours=hours)
 
 @app.route('/admin/duplicates')
 @login_required
