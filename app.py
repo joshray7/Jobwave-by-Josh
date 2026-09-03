@@ -9,7 +9,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-import os, json, csv, io, threading, time
+import os, json, csv, io, threading, time, re
 from functools import wraps
 
 
@@ -532,6 +532,74 @@ def applications():
         status_counts[s] = Application.query.filter_by(user_id=current_user.id, status=s).count()
     return render_template('applications.html', applications=apps,
                            status_counts=status_counts, status_filter=status_filter)
+
+def one_line_summary(description, max_len=160):
+    """Reduce a job description to a single clean sentence for WhatsApp."""
+    if not description:
+        return ''
+    text = re.sub(r'\s+', ' ', description).strip()
+    match = re.search(r'^(.{30,}?[.!?])\s', text + ' ')
+    if match:
+        sentence = match.group(1).strip()
+        if len(sentence) <= max_len:
+            return sentence
+    if len(text) <= max_len:
+        return text
+    return text[:max_len].rsplit(' ', 1)[0] + '…'
+
+
+def extract_requirements(description):
+    """Try to pull a short requirements/qualifications bullet list from the description."""
+    if not description:
+        return []
+    match = re.search(r'(requirements?|qualifications?|skills?)\s*:?\s*(.*)', description, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return []
+    tail = match.group(2)
+    parts = re.split(r'[•\u2022\-\n;]+', tail)
+    parts = [p.strip(' .') for p in parts if p.strip() and len(p.strip()) > 3]
+    return [p for p in parts if len(p) < 80][:4]
+
+
+def build_whatsapp_message(job):
+    """Build the standard WhatsApp job announcement format for any job, from any source."""
+    job_type_map = {
+        'full-time': 'Full-time', 'part-time': 'Part-time',
+        'remote': 'Remote', 'contract': 'Contract', 'internship': 'Internship',
+    }
+    exp_map = {'entry': 'Entry-level', 'mid': 'Mid-level', 'senior': 'Senior-level', 'lead': 'Lead-level'}
+
+    job_type_label = job_type_map.get((job.job_type or '').lower(), (job.job_type or 'Full-time').title())
+
+    lines = [
+        "🚨 *NEW JOB — JOBWAVE*",
+        f"💼 *{job.title}*",
+        f"🏢 {job.company or 'Unknown'}",
+    ]
+    if job.location:
+        lines.append(f"📍 {job.location}")
+    lines.append(f"🕐 {job_type_label}")
+
+    exp_label = exp_map.get((job.experience or '').lower())
+    if exp_label:
+        lines.append(f"📊 {exp_label}")
+
+    summary = one_line_summary(job.description)
+    if summary:
+        lines.append(f"📝 {summary}")
+
+    reqs = extract_requirements(job.description)
+    if reqs:
+        lines.append("🎯 Requirements:")
+        for r in reqs:
+            lines.append(f"• {r}")
+
+    internal_url = url_for('job_detail', job_id=job.id, _external=True)
+    lines.append(f"🔗 APPLY: {internal_url}")
+    lines.append(f"📌 Source: {job.source}")
+    lines.append("🤖 JobWave — Find your next job")
+
+    return "\n".join(lines)
 
 
 @app.route('/api/applications', methods=['POST'])
@@ -1286,10 +1354,7 @@ def whatsapp_digest():
 
     job_messages = []
     for j in jobs:
-        internal_url = url_for('job_detail', job_id=j.id, _external=True)
-        flag = "🇳🇬" if j.source in NIGERIAN_SOURCES else "🌍"
-        msg = f"{flag} *{j.title}*\n🏢 {j.company}\n📍 {j.location}\n🔗 {internal_url}\n\n_via JobWave 🌊_"
-        job_messages.append({'job': j, 'message': msg})
+        job_messages.append({'job': j, 'message': build_whatsapp_message(j)})
 
     return render_template('whatsapp_digest.html', job_messages=job_messages, hours=hours,
                            total_matching=total_matching, show_all=show_all)

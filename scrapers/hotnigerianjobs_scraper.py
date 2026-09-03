@@ -127,6 +127,9 @@ def parse_job_card(title_tag):
         elif ' is recruiting' in description:
             company = description.split(' is recruiting')[0].strip()
 
+        if company == 'Unknown':
+            company = extract_company_fallback(title)
+
         combined_text = f"{title} {description}"
 
         return {
@@ -201,6 +204,24 @@ def fetch_hotnigerianjobs_jobs(field_id: str = None, industry_id: str = None, nu
                 all_jobs.append(job)
 
     return all_jobs
+
+def extract_company_fallback(title: str) -> str:
+    """Catch patterns like 'CompanyName Job Recruitment (4 Positions)'."""
+    patterns = [
+        r'^(.*?)\s+Job\s+Recruitment\b',
+        r'^(.*?)\s+Recruitment\b',
+        r'^(.*?)\s+Latest\s+Jobs?\b',
+        r'^(.*?)\s+Job\s+Vacanc(?:y|ies)\b',
+        r'^(.*?)\s+Massive\s+Recruitment\b',
+        r'^(.*?)\s+Fresh\s+Recruitment\b',
+    ]
+    for p in patterns:
+        m = re.match(p, title, re.IGNORECASE)
+        if m:
+            candidate = m.group(1).strip()
+            if candidate and len(candidate) < 60:
+                return candidate
+    return 'Unknown'
 
 
 # ─── Search profiles ──────────────────────────────────────────────────────────

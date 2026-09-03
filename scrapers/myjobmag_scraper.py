@@ -94,6 +94,9 @@ def parse_job_card(title_tag):
         else:
             title = title_full
 
+        if company == 'Unknown':
+            company = extract_company_fallback(title)
+
         description = ''
         if container:
             desc_tag = container.find('p')
@@ -184,6 +187,24 @@ def fetch_myjobmag_jobs(category: str = None, location: str = None, num_pages: i
 
     return all_jobs
 
+
+def extract_company_fallback(title: str) -> str:
+    """Catch patterns like 'CompanyName Job Recruitment (4 Positions)'."""
+    patterns = [
+        r'^(.*?)\s+Job\s+Recruitment\b',
+        r'^(.*?)\s+Recruitment\b',
+        r'^(.*?)\s+Latest\s+Jobs?\b',
+        r'^(.*?)\s+Job\s+Vacanc(?:y|ies)\b',
+        r'^(.*?)\s+Massive\s+Recruitment\b',
+        r'^(.*?)\s+Fresh\s+Recruitment\b',
+    ]
+    for p in patterns:
+        m = re.match(p, title, re.IGNORECASE)
+        if m:
+            candidate = m.group(1).strip()
+            if candidate and len(candidate) < 60:
+                return candidate
+    return 'Unknown'
 
 # ─── Search profiles ──────────────────────────────────────────────────────────
 
