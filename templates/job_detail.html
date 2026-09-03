@@ -52,7 +52,15 @@
             {% if job.location %}<span class="badge badge-gray">📍 {{ job.location }}</span>{% endif %}
             <span class="badge badge-indigo">{{ job.job_type or 'full-time' }}</span>
             {% if job.experience %}<span class="badge badge-amber">{{ job.experience|title }} level</span>{% endif %}
-            {% if job.salary_min %}<span class="badge badge-mint">💰 ${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</span>{% endif %}
+            {% set arrangement = job.work_arrangement %}
+            <span class="badge {% if arrangement == 'Remote' %}badge-mint{% elif arrangement == 'Hybrid' %}badge-amber{% else %}badge-gray{% endif %}">
+              {% if arrangement == 'Remote' %}🌐{% elif arrangement == 'Hybrid' %}🔀{% else %}🏢{% endif %} {{ arrangement }}
+            </span>
+            {% if job.salary_min %}
+            <span class="badge badge-mint">💰 ${{ '{:,.0f}'.format(job.salary_min/1000) }}k–${{ '{:,.0f}'.format(job.salary_max/1000) }}k</span>
+            {% else %}
+            <span class="badge badge-gray" style="opacity:0.7;">🔒 Salary not disclosed</span>
+            {% endif %}
           </div>
         </div>
       </div>

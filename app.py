@@ -122,6 +122,34 @@ class Job(db.Model):
     views = db.Column(db.Integer, default=0)
     posted_to_whatsapp = db.Column(db.Boolean, default=False)
 
+    @property
+    def work_arrangement(self):
+        """Infer Remote / Hybrid / Onsite from job_type, location, and description."""
+        text = f"{self.job_type or ''} {self.location or ''} {(self.description or '')[:300]}".lower()
+        if 'hybrid' in text:
+            return 'Hybrid'
+        if 'remote' in text or self.job_type == 'remote':
+            return 'Remote'
+        return 'Onsite'
+
+    @property
+    def posted_ago(self):
+        """Human-readable freshness label based on scraped_at."""
+        if not self.scraped_at:
+            return ''
+        delta = datetime.utcnow() - self.scraped_at
+        days = delta.days
+        if days <= 0:
+            return 'Today'
+        if days == 1:
+            return 'Yesterday'
+        if days < 7:
+            return f'{days} days ago'
+        weeks = days // 7
+        if weeks < 5:
+            return f'{weeks} week{"s" if weeks != 1 else ""} ago'
+        months = days // 30
+        return f'{months} month{"s" if months != 1 else ""} ago'
 
 class SavedJob(db.Model):
     id = db.Column(db.Integer, primary_key=True)
