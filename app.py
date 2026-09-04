@@ -1782,11 +1782,15 @@ def api_jobs():
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
 with app.app_context():
     db.create_all()
 
 from scheduler import init_scheduler
 init_scheduler(app)
+print("✅ init_scheduler(app) was called", flush=True)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5003)
