@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Employer Job Queue{% endblock %}
+{% block page_title %}Pending Job Approvals{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
+{% endblock %}
+
+{% block content %}
+{% if jobs %}
+<div style="display:flex;flex-direction:column;gap:12px;" id="queue-list">
+  {% for job in jobs %}
+  <div class="card" id="queue-{{ job.id }}">
+    <div style="font-weight:700;font-size:1rem;">{{ job.title }}</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;">
+      {{ job.company }} — {{ job.location or 'Not specified' }} · Submitted {{ job.scraped_at.strftime('%b %d, %Y') }}
+    </div>
+    <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:14px;white-space:pre-line;">{{ job.description[:400] }}{% if job.description|length > 400 %}…{% endif %}</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-mint btn-sm approve-btn" data-job-id="{{ job.id }}">✓ Approve</button>
+      <button class="btn btn-danger btn-sm reject-btn" data-job-id="{{ job.id }}">✕ Reject</button>
+      <a href="{{ url_for('job_detail', job_id=job.id) }}" target="_blank" class="btn btn-outline btn-sm">Preview</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-circle-check" style="font-size:48px;color:var(--mint);opacity:0.6;"></i></div>
+  <h3>No pending jobs</h3>
+  <p>All employer submissions have been reviewed.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.approve-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.dataset.jobId;
+    const res = await fetch(`/admin/employer-jobs/${id}/approve`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById(`queue-${id}`).remove();
+      showToast('Job approved and live', 'success');
+    }
+  });
+});
+
+document.querySelectorAll('.reject-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.dataset.jobId;
+    const reason = prompt('Reason for rejection (shown to the employer):');
+    if (reason === null) return;
+    const res = await fetch(`/admin/employer-jobs/${id}/reject`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ reason })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById(`queue-${id}`).remove();
+      showToast('Job rejected', 'success');
+    }
+  });
+});
+</script>
+{% endblock %}

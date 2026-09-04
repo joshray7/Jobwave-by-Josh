@@ -121,6 +121,9 @@ class Job(db.Model):
     posted_at = db.Column(db.DateTime)
     views = db.Column(db.Integer, default=0)
     posted_to_whatsapp = db.Column(db.Boolean, default=False)
+    posted_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    approval_status = db.Column(db.String(20), default='approved')  # pending | approved | rejected
+    rejection_reason = db.Column(db.String(500))
 
     @property
     def work_arrangement(self):
@@ -167,8 +170,10 @@ class Application(db.Model):
     notes = db.Column(db.Text)
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    cover_note = db.Column(db.Text)
+    resume_link = db.Column(db.String(500))
     job = db.relationship('Job')
-
+    applicant = db.relationship('User', foreign_keys=[user_id], overlaps="applications,user")
 
 class Alert(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -221,6 +226,15 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
             flash('Admin access required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated
+
+def employer_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'employer':
+            flash('This page is for employer accounts only.', 'error')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
@@ -528,7 +542,8 @@ def applications():
         query = query.filter_by(status=status_filter)
     apps = query.order_by(Application.applied_at.desc()).all()
     status_counts = {}
-    for s in ['applied', 'interview', 'offer', 'rejected', 'withdrawn']:
+    status_counts['applied'] = Application.query.filter_by(user_id=current_user.id).count()
+    for s in ['interview', 'offer', 'rejected', 'withdrawn']:
         status_counts[s] = Application.query.filter_by(user_id=current_user.id, status=s).count()
     return render_template('applications.html', applications=apps,
                            status_counts=status_counts, status_filter=status_filter)
@@ -600,6 +615,29 @@ def build_whatsapp_message(job):
     lines.append("🤖 JobWave — Find your next job")
 
     return "\n".join(lines)
+
+def notify_trackers_of_closed_jobs(job_ids):
+    """Email any user tracking these jobs that they're no longer active."""
+    if not job_ids:
+        return
+    from collections import defaultdict
+    from mailer import send_job_closed_email
+
+    rows = db.session.query(Application.user_id, Job).join(Job, Application.job_id == Job.id)\
+        .filter(Application.job_id.in_(job_ids)).all()
+
+    by_user = defaultdict(list)
+    for user_id, job in rows:
+        by_user[user_id].append(job)
+
+    for user_id, jobs in by_user.items():
+        user = User.query.get(user_id)
+        if not user or not user.is_active:
+            continue
+        try:
+            send_job_closed_email(to_email=user.email, name=user.name, jobs=jobs)
+        except Exception as e:
+            app.logger.error(f"Job closed email failed for {user.email}: {e}")
 
 
 @app.route('/api/applications', methods=['POST'])
@@ -724,25 +762,36 @@ def export_jobs():
 @app.route('/analytics')
 @login_required
 def analytics():
-    total_jobs = Job.query.filter_by(is_active=True).count()
     my_apps = Application.query.filter_by(user_id=current_user.id).count()
     my_saved = SavedJob.query.filter_by(user_id=current_user.id).count()
+
     interview_rate = 0
     if my_apps > 0:
         interviews = Application.query.filter_by(user_id=current_user.id, status='interview').count()
         interview_rate = round((interviews / my_apps) * 100, 1)
 
-    type_dist = db.session.query(Job.job_type, db.func.count(Job.id))\
-        .filter(Job.is_active == True).group_by(Job.job_type).all()
-    source_dist = db.session.query(Job.source, db.func.count(Job.id))\
-        .filter(Job.is_active == True).group_by(Job.source).all()
     status_dist = db.session.query(Application.status, db.func.count(Application.id))\
         .filter(Application.user_id == current_user.id).group_by(Application.status).all()
 
-    return render_template('analytics.html', total_jobs=total_jobs, my_apps=my_apps,
+    # Which sources the user has actually applied through
+    applied_source_dist = db.session.query(Job.source, db.func.count(Application.id))\
+        .join(Application, Application.job_id == Job.id)\
+        .filter(Application.user_id == current_user.id)\
+        .group_by(Job.source).all()
+
+    # Work arrangement of jobs the user has saved (Remote/Hybrid/Onsite)
+    saved_jobs = db.session.query(Job).join(SavedJob, SavedJob.job_id == Job.id)\
+        .filter(SavedJob.user_id == current_user.id).all()
+    arrangement_counts = {'Remote': 0, 'Hybrid': 0, 'Onsite': 0}
+    for j in saved_jobs:
+        arrangement_counts[j.work_arrangement] += 1
+    arrangement_dist = [(k, v) for k, v in arrangement_counts.items() if v > 0]
+
+    return render_template('analytics.html', my_apps=my_apps,
                            my_saved=my_saved, interview_rate=interview_rate,
-                           type_dist=type_dist, source_dist=source_dist,
-                           status_dist=status_dist)
+                           status_dist=status_dist,
+                           applied_source_dist=applied_source_dist,
+                           arrangement_dist=arrangement_dist)
 
 
 # ─── Profile ────────────────────────────────────────────────────────────────────
@@ -1226,9 +1275,11 @@ def admin():
     total_jobs = Job.query.count()
     active_jobs = Job.query.filter_by(is_active=True).count()
     total_users = User.query.count()
+    total_applications = Application.query.count()
+    total_alerts = Alert.query.count()
     return render_template('admin.html', users=users, logs=logs,
                            total_jobs=total_jobs, active_jobs=active_jobs,
-                           total_users=total_users,
+                           total_users=total_users, total_applications=total_applications, total_alerts=total_alerts,
                            scraper_profiles=all_profiles)
 
 
@@ -1349,15 +1400,54 @@ def whatsapp_digest():
     if not show_all:
         query = query.filter(Job.posted_to_whatsapp == False)
 
+    show_flagged = request.args.get('show_flagged', '0') == '1'
+
     total_matching = query.count()
-    jobs = query.order_by(Job.scraped_at.desc()).limit(300).all()
+    all_jobs = query.order_by(Job.scraped_at.desc()).limit(300).all()
+
+    clean_jobs = [j for j in all_jobs if not is_suspicious_job(j)]
+    flagged_jobs = [j for j in all_jobs if is_suspicious_job(j)]
+
+    display_jobs = flagged_jobs if show_flagged else clean_jobs
 
     job_messages = []
-    for j in jobs:
+    for j in display_jobs:
         job_messages.append({'job': j, 'message': build_whatsapp_message(j)})
 
     return render_template('whatsapp_digest.html', job_messages=job_messages, hours=hours,
-                           total_matching=total_matching, show_all=show_all)
+                           total_matching=total_matching, show_all=show_all,
+                           show_flagged=show_flagged, flagged_count=len(flagged_jobs))
+
+SCAM_KEYWORDS = [
+    'earn big', 'earn daily', 'earn weekly', 'no experience needed and earn',
+    'registration fee', 'training fee', 'processing fee', 'send money',
+    'whatsapp only', 'click here to apply', 'guaranteed income',
+    'work and earn', 'quick money', 'easy money', 'get rich quick',
+    'investment opportunity', 'pyramid scheme',
+]
+
+
+def is_suspicious_job(job):
+    """Flag likely scam/spam postings so they're excluded from the WhatsApp digest."""
+    if not job.company or job.company.strip().lower() == 'unknown':
+        return True
+
+    text = f"{job.title} {job.description or ''}".lower()
+    if any(kw in text for kw in SCAM_KEYWORDS):
+        return True
+
+    # Excessive exclamation marks — classic spam signal
+    if job.title.count('!') >= 2:
+        return True
+
+    # Mostly-uppercase title is only suspicious when paired with spammy punctuation
+    letters = [c for c in job.title if c.isalpha()]
+    if letters and len(letters) > 8:
+        upper_ratio = sum(1 for c in letters if c.isupper()) / len(letters)
+        if upper_ratio > 0.85 and ('!' in job.title or '$' in job.title):
+            return True
+
+    return False
 
 @app.route('/admin/duplicates')
 @login_required
@@ -1400,6 +1490,7 @@ def remove_duplicates():
 
     deleted = 0
     skipped = 0
+    deactivated_ids = []
     for job_id in job_ids:
         has_saved = SavedJob.query.filter_by(job_id=job_id).first()
         has_applied = Application.query.filter_by(job_id=job_id).first()
@@ -1408,13 +1499,18 @@ def remove_duplicates():
             if job:
                 job.is_active = False
             skipped += 1
+            if has_applied:
+                deactivated_ids.append(job_id)
             continue
         Job.query.filter_by(id=job_id).delete()
         deleted += 1
 
     db.session.commit()
-    return jsonify({'success': True, 'deleted': deleted, 'skipped': skipped})
 
+    if deactivated_ids:
+        notify_trackers_of_closed_jobs(deactivated_ids)
+
+    return jsonify({'success': True, 'deleted': deleted, 'skipped': skipped})
 
 @app.route('/admin/duplicates/auto-clean', methods=['POST'])
 @login_required
@@ -1446,6 +1542,7 @@ def auto_clean_duplicates():
 
     deleted_count = 0
     skipped_count = 0
+    deactivated_ids = []
     chunk_size = 25
 
     for i in range(0, len(ids_to_delete), chunk_size):
@@ -1466,8 +1563,203 @@ def auto_clean_duplicates():
                     db.session.query(Job).filter_by(id=job_id).update({'is_active': False})
                     db.session.commit()
                     skipped_count += 1
+                    deactivated_ids.append(job_id)
+
+    if deactivated_ids:
+        notify_trackers_of_closed_jobs(deactivated_ids)
 
     return jsonify({'success': True, 'deleted': deleted_count, 'skipped': skipped_count})
+
+@app.route('/admin/employer-jobs')
+@login_required
+@admin_required
+def employer_job_queue():
+    pending = Job.query.filter_by(approval_status='pending')\
+        .order_by(Job.scraped_at.desc()).all()
+    return render_template('employer_job_queue.html', jobs=pending)
+
+
+@app.route('/admin/employer-jobs/<int:job_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def approve_employer_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    job.approval_status = 'approved'
+    job.is_active = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/admin/employer-jobs/<int:job_id>/reject', methods=['POST'])
+@login_required
+@admin_required
+def reject_employer_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    data = request.get_json(force=True, silent=True) or {}
+    job.approval_status = 'rejected'
+    job.is_active = False
+    job.rejection_reason = data.get('reason', '')[:500]
+    db.session.commit()
+    return jsonify({'success': True})
+
+# ----- POSTING SECTION -------------------------------------
+
+@app.route('/post-job', methods=['GET', 'POST'])
+@login_required
+@employer_required
+def post_job():
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        company = request.form.get('company', '').strip()
+        location = request.form.get('location', '').strip()
+        job_type = request.form.get('job_type', 'full-time')
+        experience = request.form.get('experience', 'mid')
+        salary_min = request.form.get('salary_min', type=int)
+        salary_max = request.form.get('salary_max', type=int)
+        description = request.form.get('description', '').strip()
+        requirements = request.form.get('requirements', '').strip()
+        tags = request.form.get('tags', '').strip()
+
+        if not title or not company or not description:
+            flash('Title, company, and description are required.', 'error')
+            return render_template('post_job.html')
+
+        job = Job(
+            title=title, company=company, location=location,
+            job_type=job_type, experience=experience,
+            salary_min=salary_min, salary_max=salary_max,
+            description=description, requirements=requirements, tags=tags,
+            source='JobWave Direct', is_active=False, approval_status='pending',
+            posted_by_user_id=current_user.id,
+            scraped_at=datetime.utcnow(), posted_at=datetime.utcnow(),
+        )
+        db.session.add(job)
+        db.session.commit()
+
+        job.source_url = url_for('job_detail', job_id=job.id, _external=True)
+        job.source_id = f'employer-{job.id}'
+        db.session.commit()
+
+        flash('Job submitted! It will go live once approved by an admin.', 'success')
+        return redirect(url_for('my_postings'))
+
+    return render_template('post_job.html')
+
+
+@app.route('/my-postings')
+@login_required
+@employer_required
+def my_postings():
+    jobs = Job.query.filter_by(posted_by_user_id=current_user.id)\
+        .order_by(Job.scraped_at.desc()).all()
+    applicant_counts = {j.id: Application.query.filter_by(job_id=j.id).count() for j in jobs}
+    return render_template('my_postings.html', jobs=jobs, applicant_counts=applicant_counts)
+
+
+@app.route('/my-postings/<int:job_id>/edit', methods=['GET', 'POST'])
+@login_required
+@employer_required
+def edit_posting(job_id):
+    job = Job.query.filter_by(id=job_id, posted_by_user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        job.title = request.form.get('title', '').strip()
+        job.company = request.form.get('company', '').strip()
+        job.location = request.form.get('location', '').strip()
+        job.job_type = request.form.get('job_type', 'full-time')
+        job.experience = request.form.get('experience', 'mid')
+        job.salary_min = request.form.get('salary_min', type=int)
+        job.salary_max = request.form.get('salary_max', type=int)
+        job.description = request.form.get('description', '').strip()
+        job.requirements = request.form.get('requirements', '').strip()
+        job.tags = request.form.get('tags', '').strip()
+        job.approval_status = 'pending'
+        job.is_active = False
+        db.session.commit()
+        flash('Job updated and resubmitted for approval.', 'success')
+        return redirect(url_for('my_postings'))
+    return render_template('post_job.html', job=job, editing=True)
+
+
+@app.route('/my-postings/<int:job_id>/close', methods=['POST'])
+@login_required
+@employer_required
+def close_posting(job_id):
+    job = Job.query.filter_by(id=job_id, posted_by_user_id=current_user.id).first_or_404()
+    job.is_active = False
+    db.session.commit()
+    notify_trackers_of_closed_jobs([job.id])
+    flash('Job closed.', 'success')
+    return redirect(url_for('my_postings'))
+
+@app.route('/jobs/<int:job_id>/apply', methods=['GET', 'POST'])
+@login_required
+def apply_to_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    if job.source != 'JobWave Direct':
+        flash('This job is hosted externally — use the Apply link on the job page.', 'error')
+        return redirect(url_for('job_detail', job_id=job.id))
+
+    existing = Application.query.filter_by(user_id=current_user.id, job_id=job.id).first()
+    if existing:
+        flash('You already applied to this job.', 'info')
+        return redirect(url_for('job_detail', job_id=job.id))
+
+    if request.method == 'POST':
+        cover_note = request.form.get('cover_note', '').strip()
+        resume_link = request.form.get('resume_link', '').strip()
+
+        application = Application(
+            user_id=current_user.id,
+            job_id=job.id,
+            status='applied',
+            cover_note=cover_note,
+            resume_link=resume_link,
+        )
+        db.session.add(application)
+        db.session.commit()
+        flash('Application submitted! The employer will review it soon.', 'success')
+        return redirect(url_for('job_detail', job_id=job.id))
+
+    return render_template('apply_job.html', job=job)
+
+
+@app.route('/my-postings/<int:job_id>/applicants')
+@login_required
+@employer_required
+def job_applicants(job_id):
+    job = Job.query.filter_by(id=job_id, posted_by_user_id=current_user.id).first_or_404()
+    applications = Application.query.filter_by(job_id=job.id)\
+        .order_by(Application.applied_at.desc()).all()
+    return render_template('job_applicants.html', job=job, applications=applications)
+
+
+@app.route('/my-postings/applicants/<int:application_id>/status', methods=['POST'])
+@login_required
+@employer_required
+def update_applicant_status(application_id):
+    application = Application.query.get_or_404(application_id)
+    if application.job.posted_by_user_id != current_user.id:
+        return jsonify({'success': False}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    new_status = data.get('status')
+    if new_status not in ['applied', 'interview', 'offer', 'rejected', 'withdrawn']:
+        return jsonify({'success': False, 'message': 'Invalid status'}), 400
+    application.status = new_status
+    db.session.commit()
+
+    if new_status in ('interview', 'offer', 'rejected'):
+        from mailer import send_application_status_email
+        try:
+            send_application_status_email(
+                to_email=application.applicant.email,
+                name=application.applicant.name,
+                job=application.job,
+                status=new_status,
+            )
+        except Exception as e:
+            app.logger.error(f"Status email failed: {e}")
+
+    return jsonify({'success': True})
 
 # ─── API Endpoints ─────────────────────────────────────────────────────────────
 
@@ -1496,13 +1788,4 @@ if __name__ == '__main__':
     from scheduler import init_scheduler
     init_scheduler(app)
     app.run(debug=True, port=5003)
-
-
-
-
-
-
-
-
-
 

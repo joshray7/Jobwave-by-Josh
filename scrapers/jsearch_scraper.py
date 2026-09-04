@@ -230,7 +230,7 @@ SEARCH_PROFILES = [
         'name': 'Product & Design',
         'query': 'product manager UI UX designer',
         'location': 'GLOBAL',
-        'num_pages': 2,
+        'num_pages': 1,
         'date_posted': 'month',
     },
     {

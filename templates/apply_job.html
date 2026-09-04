@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Apply — {{ job.title }}{% endblock %}
+{% block page_title %}Apply to {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;margin:0 auto;">
+  <div style="margin-bottom:20px;">
+    <div style="font-weight:800;font-size:1.1rem;">{{ job.title }}</div>
+    <div style="color:var(--text-muted);font-size:0.85rem;">{{ job.company }} — {{ job.location or 'Not specified' }}</div>
+  </div>
+
+  <form method="POST" class="auth-form">
+    <div class="form-group">
+      <label class="form-label">Resume / Portfolio Link</label>
+      <input class="form-control" type="url" name="resume_link" placeholder="https://drive.google.com/... or LinkedIn profile">
+      <div class="label-hint" style="margin-top:4px;">Paste a link to your resume (Google Drive, Dropbox, LinkedIn, etc.) — file upload isn't supported yet.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Cover Note</label>
+      <textarea class="form-control" name="cover_note" rows="6" placeholder="Briefly say why you're a good fit for this role..."></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary auth-submit">Submit Application</button>
+  </form>
+</div>
+{% endblock %}

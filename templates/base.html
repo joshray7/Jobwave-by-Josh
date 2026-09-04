@@ -56,11 +56,24 @@
       <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span> Analytics
       </a>
-
+      
       {% if current_user.role == 'admin' %}
       <span class="nav-section-label">Admin</span>
       <a href="{{ url_for('admin') }}" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-gear"></i></span> Admin Panel
+      </a>
+      <a href="{{ url_for('employer_job_queue') }}" class="nav-link {% if request.endpoint == 'employer_job_queue' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-user-tie"></i></span> Job Approvals
+      </a>
+      {% endif %}
+
+      {% if current_user.role == 'employer' %}
+      <span class="nav-section-label">Employer</span>
+      <a href="{{ url_for('post_job') }}" class="nav-link {% if request.endpoint == 'post_job' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-plus"></i></span> Post a Job
+      </a>
+      <a href="{{ url_for('my_postings') }}" class="nav-link {% if request.endpoint in ['my_postings','edit_posting'] %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-briefcase"></i></span> My Postings
       </a>
       {% endif %}
 

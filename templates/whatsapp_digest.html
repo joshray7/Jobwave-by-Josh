@@ -27,11 +27,24 @@
         <a href="{{ url_for('whatsapp_digest', hours=72) }}" class="btn btn-outline btn-sm {% if hours == 72 %}btn-primary{% endif %}">3 days</a>
         <a href="{{ url_for('whatsapp_digest', hours=168) }}" class="btn btn-outline btn-sm {% if hours == 168 %}btn-primary{% endif %}">1 week</a>
         <a href="{{ url_for('whatsapp_digest', hours=hours, show_all=1) }}" class="btn btn-outline btn-sm {% if show_all %}btn-primary{% endif %}">Show All (incl. Posted)</a>
+        {% if flagged_count and flagged_count > 0 %}
+        <a href="{{ url_for('whatsapp_digest', hours=hours, show_flagged=1) }}" class="btn btn-outline btn-sm" style="border-color:#ff5555;color:#ff5555;">
+          ⚠️ {{ flagged_count }} Flagged — Review
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>
 
   {% if job_messages %}
+  {% if show_flagged %}
+  <div class="card" style="margin-bottom:20px;background:rgba(255,60,60,0.08);border-color:rgba(255,60,60,0.2);">
+    <div style="font-size:0.85rem;color:#ff7777;">
+      ⚠️ These jobs were auto-flagged as possible spam/scam and are <strong>excluded</strong> from the normal digest. Review manually — legitimate ones can still be copied and posted.
+    </div>
+  </div>
+  {% endif %}
+
   <div class="card" style="margin-bottom:20px;background:var(--indigo-dim);">
     <div style="font-size:0.85rem;color:var(--text-dim);">
       <i class="fa-brands fa-whatsapp" style="color:var(--mint);"></i>

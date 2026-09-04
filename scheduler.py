@@ -169,7 +169,7 @@ def run_alert_emails(app):
 def run_job_expiry(app):
     """Mark jobs older than 30 days as inactive — runs daily."""
     with app.app_context():
-        from app import db, Job
+        from app import db, Job, notify_trackers_of_closed_jobs
         from datetime import datetime, timedelta
 
         cutoff = datetime.utcnow() - timedelta(days=30)
@@ -186,21 +186,23 @@ def run_job_expiry(app):
             db.session.commit()
             expired_count += len(chunk)
 
-        logger.info(f"Job expiry: {expired_count} jobs marked inactive (older than 30 days)")
+        if old_job_ids:
+            notify_trackers_of_closed_jobs(old_job_ids)
 
+        logger.info(f"Job expiry: {expired_count} jobs marked inactive (older than 30 days)")
 
 def init_scheduler(app):
     """Start the scheduler. Call once at app startup."""
     if scheduler.running:
         return
 
-    # Daily scrape at midnight Lagos time
+        # Scrape twice daily — midnight and noon, Lagos time
     scheduler.add_job(
         func=run_daily_scraper,
         args=[app],
-        trigger=CronTrigger(hour=0, minute=0),
+        trigger=CronTrigger(hour='0,12', minute=0),
         id='daily_scraper',
-        name='Daily JSearch Scrape',
+        name='Twice-Daily Scrape',
         replace_existing=True,
     )
 
@@ -225,4 +227,4 @@ def init_scheduler(app):
     )
 
     scheduler.start()
-    logger.info("JobWave scheduler started — daily scrape at midnight, expiry at 1am, alerts at 8am (Lagos)")
+    logger.info("JobWave scheduler started — scrape at midnight & noon, expiry at 1am, alerts at 8am (Lagos)")

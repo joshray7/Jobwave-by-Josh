@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Applicants — {{ job.title }}{% endblock %}
+{% block page_title %}Applicants{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('my_postings') }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-left"></i> My Postings</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:800;font-size:1.1rem;">{{ job.title }}</div>
+  <div style="color:var(--text-muted);font-size:0.85rem;">{{ applications|length }} applicant{{ 's' if applications|length != 1 }}</div>
+</div>
+
+{% if applications %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for app in applications %}
+  <div class="card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:700;">{{ app.applicant.name }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">{{ app.applicant.email }} · Applied {{ app.applied_at.strftime('%b %d, %Y') }}</div>
+        {% if app.resume_link %}
+        <div style="margin-top:8px;"><a href="{{ app.resume_link }}" target="_blank" class="btn btn-outline btn-sm"><i class="fa-solid fa-file"></i> View Resume</a></div>
+        {% endif %}
+        {% if app.cover_note %}
+        <div style="margin-top:10px;font-size:0.85rem;color:var(--text-dim);white-space:pre-line;background:var(--surface2);border-radius:8px;padding:10px 14px;">{{ app.cover_note }}</div>
+        {% endif %}
+      </div>
+      <select class="form-control status-update-select" data-app-id="{{ app.id }}" style="width:auto;">
+        {% for s in ['applied','interview','offer','rejected','withdrawn'] %}
+        <option value="{{ s }}" {% if app.status == s %}selected{% endif %}>{{ s|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-inbox" style="font-size:48px;opacity:0.3;"></i></div>
+  <h3>No applicants yet</h3>
+  <p>Once job seekers apply, they'll show up here.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.status-update-select').forEach(sel => {
+  sel.addEventListener('change', async () => {
+    const id = sel.dataset.appId;
+    try {
+      const res = await fetch(`/my-postings/applicants/${id}/status`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ status: sel.value })
+      });
+      const data = await res.json();
+      if (data.success) showToast('Status updated', 'success');
+    } catch { showToast('Failed to update', 'error'); }
+  });
+});
+</script>
+{% endblock %}

@@ -66,6 +66,66 @@ def base_html(title: str, body: str) -> str:
 </html>
 """
 
+def send_job_closed_email(to_email: str, name: str, jobs: list):
+    """Notify a user that job(s) they were tracking have closed or expired."""
+    count = len(jobs)
+    jobs_html = ""
+    for job in jobs[:8]:
+        jobs_html += f"""
+        <div class="job-card">
+          <div class="job-title">{job.title}</div>
+          <div class="job-meta">{job.company} · {job.location or 'N/A'}</div>
+        </div>
+        """
+    body = f"""
+      <h1>📪 Job{"s" if count != 1 else ""} No Longer Available</h1>
+      <p>Hi {name}, {"these jobs you were tracking are" if count != 1 else "a job you were tracking is"} no longer active — it may have closed or expired.</p>
+      {jobs_html}
+      <a href="{APP_URL}/applications" class="btn">View My Applications →</a>
+      <div class="divider"></div>
+      <p style="font-size:0.78rem;">You're receiving this because you tracked this application on JobWave.</p>
+    """
+    client = get_client()
+    client.Emails.send({
+        "from": f"{APP_NAME} <{FROM_EMAIL}>",
+        "to": [to_email],
+        "subject": f"[JobWave] {count} tracked job{'s' if count != 1 else ''} no longer available",
+        "html": base_html("Job Update", body),
+    })
+
+
+def send_application_status_email(to_email: str, name: str, job, status: str):
+    """Notify an applicant that their JobWave Direct application status changed."""
+    status_copy = {
+        'interview': ('🎉 You\'ve Been Invited to Interview!',
+                       f'Great news — {job.company} would like to interview you for the {job.title} role.'),
+        'offer': ('🎊 You\'ve Received a Job Offer!',
+                  f'Congratulations — {job.company} has extended you an offer for {job.title}!'),
+        'rejected': ('Update on Your Application',
+                     f'{job.company} has decided not to move forward with your application for {job.title} at this time.'),
+    }
+    if status not in status_copy:
+        return
+    heading, message = status_copy[status]
+    body = f"""
+      <h1>{heading}</h1>
+      <p>Hi {name}, {message}</p>
+      <div class="job-card">
+        <div class="job-title">{job.title}</div>
+        <div class="job-meta">{job.company} · {job.location or 'N/A'}</div>
+      </div>
+      <a href="{APP_URL}/applications" class="btn">View My Applications →</a>
+      <div class="divider"></div>
+      <p style="font-size:0.78rem;">You're receiving this because you applied to this job on JobWave.</p>
+    """
+    client = get_client()
+    client.Emails.send({
+        "from": f"{APP_NAME} <{FROM_EMAIL}>",
+        "to": [to_email],
+        "subject": f"[JobWave] {heading}",
+        "html": base_html("Application Update", body),
+    })
+
 # ── Password Reset Email ───────────────────────────────────────────────────────
 def send_password_reset(to_email: str, reset_url: str, name: str):
     body = f"""
@@ -111,12 +171,12 @@ def send_job_alert(to_email: str, name: str, keyword: str, jobs: list):
       <a href="{APP_URL}/alerts" style="color:#8888ff;">Manage your alerts →</a></p>
     """
     client = get_client()
-    client.Emails.send({{
+    client.Emails.send({
         "from": f"{APP_NAME} <{FROM_EMAIL}>",
         "to": [to_email],
         "subject": f"[JobWave] {count} new job{'s' if count != 1 else ''} for \"{keyword}\"",
         "html": base_html("Job Alert", body),
-    }})
+    })
 
 
 # ── Welcome Email ──────────────────────────────────────────────────────────────
