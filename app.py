@@ -1782,10 +1782,11 @@ def api_jobs():
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    from scheduler import init_scheduler
-    init_scheduler(app)
-    app.run(debug=True, port=5003)
+with app.app_context():
+    db.create_all()
 
+from scheduler import init_scheduler
+init_scheduler(app)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5003)

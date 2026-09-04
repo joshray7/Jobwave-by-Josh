@@ -196,7 +196,7 @@ def init_scheduler(app):
     if scheduler.running:
         return
 
-        # Scrape twice daily — midnight and noon, Lagos time
+    # Scrape twice daily — midnight and noon, Lagos time
     scheduler.add_job(
         func=run_daily_scraper,
         args=[app],
