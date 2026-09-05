@@ -2,21 +2,17 @@
 
 /* ── NeonTide Design System ─────────────────────────────────────────────────── */
 :root {
-  --indigo: #3b00ff;
+  --indigo: #2563eb;
   --mint: #00c88a;
-  --violet: #a000ff;
-  --pink: #ff00c8;
-  --indigo-dim: rgba(59,0,255,0.1);
+  --indigo-dim: rgba(37,99,235,0.1);
   --mint-dim: rgba(0,200,138,0.1);
-  --indigo-glow: rgba(59,0,255,0.3);
-  --mint-glow: rgba(0,200,138,0.3);
-  --violet-glow: rgba(160,0,255,0.3);
-  --pink-glow: rgba(255,0,200,0.3);
+  --indigo-glow: rgba(37,99,235,0.25);
+  --mint-glow: rgba(0,200,138,0.25);
   --bg: #050510;
   --bg2: #080818;
   --surface: #0d0d24;
   --surface2: #12122e;
-  --border: rgba(59,0,255,0.2);
+  --border: rgba(37,99,235,0.2);
   --border-mint: rgba(0,200,138,0.15);
   --text: #e8e8ff;
   --text-dim: #7878aa;
@@ -30,21 +26,21 @@
 
 /* ── Light Mode ── */
 [data-theme="light"] {
-  --indigo: #3b00ff;
+  --indigo: #2563eb;
   --mint: #00a572;
-  --indigo-dim: rgba(59,0,255,0.08);
+  --indigo-dim: rgba(37,99,235,0.08);
   --mint-dim: rgba(0,165,114,0.08);
-  --indigo-glow: rgba(59,0,255,0.2);
-  --mint-glow: rgba(0,165,114,0.2);
-  --bg: #f0f0f8;
-  --bg2: #e8e8f4;
+  --indigo-glow: rgba(37,99,235,0.18);
+  --mint-glow: rgba(0,165,114,0.18);
+  --bg: #f7f8fa;
+  --bg2: #eef0f3;
   --surface: #ffffff;
-  --surface2: #f4f4fc;
-  --border: rgba(59,0,255,0.15);
+  --surface2: #f4f5f7;
+  --border: rgba(37,99,235,0.15);
   --border-mint: rgba(0,165,114,0.15);
-  --text: #0a0a1a;
-  --text-dim: #3a3a5c;
-  --text-muted: #8888aa;
+  --text: #0f172a;
+  --text-dim: #475569;
+  --text-muted: #94a3b8;
 }
 
 [data-theme="light"] body::before {
@@ -76,6 +72,15 @@
 
 [data-theme="light"] .btn-ghost { color: var(--text-dim); }
 [data-theme="light"] .btn-ghost:hover { background: var(--indigo-dim); color: var(--text); }
+
+/* Landing nav is always dark regardless of theme — force readable text */
+.landing-nav .btn-ghost {
+  color: rgba(255,255,255,0.85) !important;
+}
+.landing-nav .btn-ghost:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.08);
+}
 
 /* ── Theme toggle button ── */
 .theme-toggle {
@@ -251,13 +256,13 @@ a:hover { color: #fff; }
 .user-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--indigo), var(--mint));
+  background: var(--mint);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
-  color: #fff;
+  color: #05050f;
   flex-shrink: 0;
 }
 
@@ -317,7 +322,7 @@ a:hover { color: #fff; }
   position: absolute;
   inset: -1px;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--indigo-glow), var(--mint-glow));
+  background: var(--mint-glow);
   z-index: -1;
   opacity: 0;
   transition: opacity 0.3s;
@@ -484,7 +489,7 @@ select.form-control { cursor: pointer; }
 .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 
 .job-card {
-  background: var(--surface);
+  background: var(--mint);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
@@ -498,7 +503,7 @@ select.form-control { cursor: pointer; }
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--indigo), var(--mint));
+  background: var(--mint);
   opacity: 0;
   transition: opacity var(--transition);
 }
@@ -511,7 +516,7 @@ select.form-control { cursor: pointer; }
 .company-logo {
   width: 44px; height: 44px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--indigo-dim), var(--mint-dim));
+  background: var(--mint-dim);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -712,10 +717,7 @@ tr:hover td { background: var(--indigo-dim); }
 
 /* ── Gradient Text ── */
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, var(--mint) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--mint);
 }
 
 /* ── Divider ── */
@@ -937,8 +939,8 @@ tr:hover td { background: var(--indigo-dim); }
 }
 .hero-glow {
   position: absolute;
-  width: 100%; max-width: 600px; height: 300px;;
-  background: radial-gradient(ellipse, rgba(59,0,255,0.2) 0%, transparent 70%);
+  width: 100%; max-width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(0,200,138,0.12) 0%, transparent 70%);
   top: 50%; left: 50%; transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -1499,10 +1501,3 @@ tr[onclick]:hover td { background: var(--indigo-dim); }
   --col-red-dim: rgba(255,85,85,0.1);
 }
 
-
-
-
-
-
-
-.sidebar-nav

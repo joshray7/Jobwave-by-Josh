@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+  <style>
+    .faq-item { border-bottom: 1px solid var(--border); padding: 18px 0; }
+    .faq-question { font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .faq-answer { color: var(--text-dim); font-size: 0.88rem; line-height: 1.7; margin-top: 10px; display: none; }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-icon { transition: transform 0.2s; color: var(--mint); font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+<div class="landing">
+  <div class="landing-nav">
+    <a href="{{ url_for('index') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <div class="logo-mark">JW</div>
+      <div class="logo-text">Job<span>Wave</span></div>
+    </a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back Home</a>
+  </div>
+
+  <div style="max-width:700px;margin:0 auto;padding:50px 20px;">
+    <h1 style="font-size:1.8rem;margin-bottom:8px;">Frequently Asked Questions</h1>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:32px;">Everything you need to know about using JobWave.</p>
+
+    <div id="faq-list">
+
+      <div class="faq-item">
+        <div class="faq-question">Is JobWave free to use? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">Yes, creating an account, browsing jobs, saving jobs, setting alerts, and tracking your applications are all completely free for job seekers.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Where do the job listings come from? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">We aggregate listings from multiple sources including JSearch, Adzuna, Remotive, The Muse, MyJobMag, HotNigerianJobs, and Jobberman — plus jobs posted directly by employers on JobWave. New listings are refreshed automatically twice a day.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the difference between "Apply Now" and "Track Application"? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">"Apply Now" appears on jobs posted directly on JobWave by employers your application is submitted right here and the employer reviews it in their dashboard. "Track Application" appears on aggregated listings from other job sites — you apply on the original site, then click Track Application to log it in your personal JobWave tracker so you can keep tabs on your progress.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Will I be notified if a job I applied to changes status? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">For jobs posted directly on JobWave, yes you'll get an email if the employer moves you to Interview, Offer, or Rejected. For aggregated jobs, JobWave can't see what happens on the original site, so you'll need to update your own tracker manually. You will get notified by email if a tracked job closes or expires.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do I post a job as an employer? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">Register for an employer account, then go to "Post a Job" from your dashboard. Every submission is reviewed before going live to keep listings genuine and spam-free.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How long does job approval take? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">We review employer submissions as quickly as possible. You'll see the status update on your "My Postings" page, and receive a note if a listing needs changes before it can go live.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Can I edit or close a job I've posted? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">Yes — from "My Postings" you can edit a listing (it will need re-approval) or close it once the role is filled.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do job alerts work? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">Set a keyword, location, or job type on the Alerts page, and JobWave will email you when new matching listings come in — daily or weekly, your choice.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Is my data safe? <span class="faq-icon">+</span></div>
+        <div class="faq-answer">Yes — passwords are securely hashed and we don't sell your personal data. See our <a href="{{ url_for('privacy') }}" style="color:var(--mint);">Privacy Policy</a> for full details.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.faq-question').forEach(q => {
+  q.addEventListener('click', () => {
+    q.parentElement.classList.toggle('open');
+  });
+});
+</script>
+</body>
+</html>

@@ -17,6 +17,13 @@
     }
     .sidebar-overlay.show { display: block; }
   </style>
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "yd7x4dsu0p");
+  </script>
 </head>
 <body>
 
@@ -56,7 +63,7 @@
       <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span> Analytics
       </a>
-      
+
       {% if current_user.role == 'admin' %}
       <span class="nav-section-label">Admin</span>
       <a href="{{ url_for('admin') }}" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
@@ -90,6 +97,13 @@
     </nav>
 
     <div class="sidebar-footer">
+      <div style="padding:0 12px 10px;display:flex;gap:6px;align-items:center;justify-content:center;">
+        <a href="{{ url_for('faq') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">FAQ</a>
+        <span style="color:var(--border);font-size:0.6rem;">•</span>
+        <a href="{{ url_for('privacy') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">Privacy</a>
+        <span style="color:var(--border);font-size:0.6rem;">•</span>
+        <a href="{{ url_for('terms') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">Terms</a>
+      </div>
       <div class="user-card">
         <div class="user-avatar">{{ current_user.name[0].upper() }}</div>
         <div class="user-info">

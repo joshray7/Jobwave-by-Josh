@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+</head>
+<body>
+<div class="landing">
+  <div class="landing-nav">
+    <a href="{{ url_for('index') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <div class="logo-mark">JW</div>
+      <div class="logo-text">Job<span>Wave</span></div>
+    </a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back Home</a>
+  </div>
+
+  <div style="max-width:760px;margin:0 auto;padding:50px 20px;">
+    <h1 style="font-size:1.8rem;margin-bottom:8px;">Terms of Service</h1>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:32px;">Last updated: September 2026</p>
+
+    <div style="display:flex;flex-direction:column;gap:24px;color:var(--text-dim);line-height:1.7;font-size:0.92rem;">
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">1. Accepting These Terms</h3>
+        <p>By creating an account or using JobWave, you agree to these Terms of Service. If you don't agree, please don't use the platform.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">2. What JobWave Is</h3>
+        <p>JobWave is a job discovery platform that aggregates publicly available listings from multiple sources and also allows employers to post jobs directly. We are not the employer for any aggregated listing. Those roles belong to the companies listed, and applications for those go through the original source.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">3. Account Responsibilities</h3>
+        <p>You're responsible for keeping your account credentials secure and for the accuracy of any information you provide, including your profile and any job postings you submit as an employer.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">4. Employer Job Postings</h3>
+        <p>All employer-submitted job postings are reviewed before going live to help maintain quality and prevent spam or fraudulent listings. We reserve the right to reject, edit for clarity, or remove any posting at our discretion, including after it's live if it violates these terms.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">5. Prohibited Use</h3>
+        <p>You may not use JobWave to post fraudulent job listings, request upfront payment from applicants, scrape or resell our data, harass other users, or attempt to disrupt the platform's operation.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">6. Aggregated Content</h3>
+        <p>Job listings aggregated from third-party sources remain the property of their original publishers. JobWave provides links back to original sources and does not claim ownership of that content.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">7. No Guarantee of Employment</h3>
+        <p>JobWave is a discovery and application tool. We do not guarantee that any listing is accurate, currently open, or that applying will result in a job offer.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">8. Limitation of Liability</h3>
+        <p>JobWave is provided "as is." We aren't liable for losses arising from your use of the platform, including issues with third-party job listings or employer postings.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">9. Changes to These Terms</h3>
+        <p>We may update these terms occasionally. Continued use of JobWave after changes means you accept the updated terms.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">10. Contact</h3>
+        <p>Questions about these terms? Reach out through the contact details on our platform.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

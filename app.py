@@ -1054,8 +1054,13 @@ def run_scraper_task(profile_name, app_context):
                 raise ValueError(f"Unknown profile: {profile_name}")
 
             added = 0
+            seen_in_batch = set()
             for jd in jobs_data:
-                if not Job.query.filter_by(source_id=jd.get('source_id')).first():
+                source_id = jd.get('source_id')
+                if source_id in seen_in_batch:
+                    continue
+                seen_in_batch.add(source_id)
+                if not Job.query.filter_by(source_id=source_id).first():
                     db.session.add(Job(**jd))
                     added += 1
             db.session.commit()
@@ -1179,8 +1184,13 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                 raise ValueError(f"Unknown profile: {profile_name}")
 
             added = 0
+            seen_in_batch = set()
             for jd in jobs_data:
-                if not Job.query.filter_by(source_id=jd.get('source_id')).first():
+                source_id = jd.get('source_id')
+                if source_id in seen_in_batch:
+                    continue
+                seen_in_batch.add(source_id)
+                if not Job.query.filter_by(source_id=source_id).first():
                     db.session.add(Job(**jd))
                     added += 1
             db.session.commit()
@@ -1779,6 +1789,18 @@ def api_jobs():
         'salary_min': j.salary_min, 'salary_max': j.salary_max
     } for j in jobs])
 
+# ----------- TERMS OF SERVICE AND PRIVACY POLICY PAGES -----------------
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+@app.route('/faq')
+def faq():
+    return render_template('faq.html')
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 

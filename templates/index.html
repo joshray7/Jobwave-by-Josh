@@ -37,7 +37,7 @@
     <div class="hero-content">
 
       <div class="hero-eyebrow">
-        ✦ Live job aggregator — updated daily
+        ✦ Updated twice daily with fresh listings from multiple sources
       </div>
 
       <h1>
@@ -48,8 +48,8 @@
       </h1>
 
       <p>
-        JobWave pulls opportunities from dozens of sources into one searchable dashboard.
-        Search, save, apply, and track — all in one place.
+        JobWave combines listings from JSearch, Adzuna, Remotive, The Muse, MyJobMag, HotNigerianJobs, and Jobberman into one dashboard,
+        so you can search, save, apply, and track your applications without checking seven different sites.
       </p>
 
       <div class="hero-actions">
@@ -149,7 +149,7 @@
   <section class="feature-grid">
 
     <div class="feature-card">
-      <div class="feature-icon">🔍</div>
+      <div class="feature-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
       <h3>Smart Search</h3>
       <p>
         Filter by keyword, location, salary, experience, or job type.
@@ -157,46 +157,55 @@
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon">📋</div>
+      <div class="feature-icon"><i class="fa-solid fa-clipboard-list"></i></div>
       <h3>Application Tracker</h3>
       <p>
-        Track every application from applied → interview → offer.
+        Log every application and move it through applied, interview, offer, or rejected as things progress.
       </p>
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon">🔔</div>
+      <div class="feature-icon"><i class="fa-solid fa-bell"></i></div>
       <h3>Job Alerts</h3>
       <p>
-        Get notified daily or weekly when matching jobs are posted.
+        Set a keyword and location once, get emailed daily or weekly when something new matches.
       </p>
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon">📊</div>
-      <h3>Analytics</h3>
+      <div class="feature-icon"><i class="fa-solid fa-chart-bar"></i></div>
+      <h3>Personal Analytics</h3>
       <p>
-        Visualize your job search progress and market trends.
+        See your own application pipeline, interview rate, and where you've been applying.
       </p>
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon">↓</div>
-      <h3>Export Data</h3>
+      <div class="feature-icon"><i class="fa-solid fa-file-arrow-down"></i></div>
+      <h3>Export Your Data</h3>
       <p>
-        Export saved jobs or applications as CSV or JSON.
+        Download your saved jobs or applications as CSV or JSON any time.
       </p>
     </div>
 
     <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h3>Live Scraping</h3>
+      <div class="feature-icon"><i class="fa-solid fa-building"></i></div>
+      <h3>Post a Job Directly</h3>
       <p>
-        Real jobs from Indeed, LinkedIn and more via JSearch API.
+        Employers can post openings straight to JobWave and review applicants in their own dashboard.
       </p>
     </div>
 
   </section>
+
+<div style="padding:30px 40px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+  <div style="color:var(--text-muted);font-size:0.8rem;">© 2026 JobWave. Built by Josh.</div>
+  <div style="display:flex;gap:20px;">
+    <a href="{{ url_for('faq') }}" style="color:var(--text-muted);font-size:0.82rem;">FAQ</a>
+    <a href="{{ url_for('privacy') }}" style="color:var(--text-muted);font-size:0.82rem;">Privacy Policy</a>
+    <a href="{{ url_for('terms') }}" style="color:var(--text-muted);font-size:0.82rem;">Terms of Service</a>
+  </div>
+</div>
 
 </div>
 

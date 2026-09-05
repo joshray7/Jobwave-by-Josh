@@ -20,7 +20,7 @@
           <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem;">(of {{ total_matching }} total — showing most recent {{ job_messages|length }})</span>
           {% endif %}
         </div>
-        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">🇳🇬 Nigerian + 🌍 International — last {{ hours }}h — links point to JobWave</div>
+        <div style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">Nigerian and international, last {{ hours }}h, links point to JobWave</div>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="{{ url_for('whatsapp_digest', hours=24) }}" class="btn btn-outline btn-sm {% if hours == 24 %}btn-primary{% endif %}">24h</a>
@@ -48,7 +48,7 @@
   <div class="card" style="margin-bottom:20px;background:var(--indigo-dim);">
     <div style="font-size:0.85rem;color:var(--text-dim);">
       <i class="fa-brands fa-whatsapp" style="color:var(--mint);"></i>
-      Post each job as its <strong>own message</strong> — click Copy on a job, paste into your WhatsApp Channel, send, then move to the next.
+     Post each job as its <strong>own message</strong> click Copy on a job, paste into your WhatsApp Channel, send, then move to the next.
     </div>
   </div>
 

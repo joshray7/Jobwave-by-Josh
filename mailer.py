@@ -78,7 +78,7 @@ def send_job_closed_email(to_email: str, name: str, jobs: list):
         </div>
         """
     body = f"""
-      <h1>📪 Job{"s" if count != 1 else ""} No Longer Available</h1>
+      <h1>Job{"s" if count != 1 else ""} no longer available</h1>
       <p>Hi {name}, {"these jobs you were tracking are" if count != 1 else "a job you were tracking is"} no longer active — it may have closed or expired.</p>
       {jobs_html}
       <a href="{APP_URL}/applications" class="btn">View My Applications →</a>
@@ -97,11 +97,11 @@ def send_job_closed_email(to_email: str, name: str, jobs: list):
 def send_application_status_email(to_email: str, name: str, job, status: str):
     """Notify an applicant that their JobWave Direct application status changed."""
     status_copy = {
-        'interview': ('🎉 You\'ve Been Invited to Interview!',
-                       f'Great news — {job.company} would like to interview you for the {job.title} role.'),
-        'offer': ('🎊 You\'ve Received a Job Offer!',
-                  f'Congratulations — {job.company} has extended you an offer for {job.title}!'),
-        'rejected': ('Update on Your Application',
+        'interview': ('You\'ve been invited to interview',
+                       f'{job.company} would like to interview you for the {job.title} role.'),
+        'offer': ('You\'ve received a job offer',
+                  f'{job.company} has extended you an offer for {job.title}.'),
+        'rejected': ('Update on your application',
                      f'{job.company} has decided not to move forward with your application for {job.title} at this time.'),
     }
     if status not in status_copy:
@@ -153,7 +153,7 @@ def send_job_alert(to_email: str, name: str, keyword: str, jobs: list):
     for job in jobs[:8]:   # max 8 jobs per email
         salary = ""
         if job.salary_min:
-            salary = f'<div class="job-salary">💰 ${job.salary_min//1000:,}k – ${job.salary_max//1000:,}k</div>'
+            salary = f'<div class="job-salary">${job.salary_min//1000:,}k - ${job.salary_max//1000:,}k</div>'
         jobs_html += f"""
         <div class="job-card">
           <div class="job-title">{job.title} <span class="badge badge-mint">{job.job_type or 'full-time'}</span></div>
@@ -162,7 +162,7 @@ def send_job_alert(to_email: str, name: str, keyword: str, jobs: list):
         </div>
         """
     body = f"""
-      <h1>🔔 {count} New Job{"s" if count != 1 else ""} for "{keyword}"</h1>
+      <h1>{count} new job{"s" if count != 1 else ""} for "{keyword}"</h1>
       <p>Hi {name}, we found <strong style="color:#fff;">{count} new listing{"s" if count != 1 else ""}</strong> matching your alert.</p>
       {jobs_html}
       <a href="{APP_URL}/jobs?q={keyword}" class="btn">View All Results →</a>

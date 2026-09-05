@@ -35,8 +35,13 @@ def run_daily_scraper(app):
             try:
                 jobs_data = fetch_fn(**kwargs)
                 added = 0
+                seen_in_batch = set()
                 for jd in jobs_data:
-                    if not Job.query.filter_by(source_id=jd.get('source_id')).first():
+                    source_id = jd.get('source_id')
+                    if source_id in seen_in_batch:
+                        continue
+                    seen_in_batch.add(source_id)
+                    if not Job.query.filter_by(source_id=source_id).first():
                         db.session.add(Job(**jd))
                         added += 1
                 db.session.commit()

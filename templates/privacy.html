@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+</head>
+<body>
+<div class="landing">
+  <div class="landing-nav">
+    <a href="{{ url_for('index') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <div class="logo-mark">JW</div>
+      <div class="logo-text">Job<span>Wave</span></div>
+    </a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back Home</a>
+  </div>
+
+  <div style="max-width:760px;margin:0 auto;padding:50px 20px;">
+    <h1 style="font-size:1.8rem;margin-bottom:8px;">Privacy Policy</h1>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:32px;">Last updated: September 2026</p>
+
+    <div style="display:flex;flex-direction:column;gap:24px;color:var(--text-dim);line-height:1.7;font-size:0.92rem;">
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">1. What We Collect</h3>
+        <p>When you create a JobWave account, we collect your name, email address, and password (securely hashed — we never store plain-text passwords). If you build a profile, you may also share your skills, experience level, location, and links like GitHub or LinkedIn. If you apply to a job posted directly on JobWave, we collect your cover note and any resume link you provide. If you post a job as an employer, we collect your company details and the job listing content.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">2. Job Listings We Aggregate</h3>
+        <p>JobWave collects publicly available job listings from third-party sources (JSearch, Adzuna, Remotive, The Muse, MyJobMag, HotNigerianJobs, and Jobberman) to help you discover opportunities in one place. We link back to the original source wherever possible so you can verify and apply directly.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">3. How We Use Your Information</h3>
+        <p>We use your information to operate your account, send job alert emails you've opted into, notify you about the status of applications you've tracked or submitted, and improve the platform. We do not sell your personal data to third parties.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">4. Email Communications</h3>
+        <p>We send emails for account actions (welcome, password reset), job alerts you've configured, and updates about applications you've tracked or submitted. You can manage or cancel job alerts anytime from your Alerts page.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">5. Cookies & Analytics</h3>
+        <p>We use browser local storage to remember your theme preference (dark/light mode). We also use Microsoft Clarity, a website analytics tool, to understand how visitors use JobWave. This includes page views, click patterns, and anonymized session behavior, and it helps us improve the platform. Clarity does not collect personally identifiable information like your name or email, and we do not use this data for advertising. You can read Microsoft's own privacy practices at <a href="https://privacy.microsoft.com/privacystatement" target="_blank" style="color:var(--mint);">privacy.microsoft.com</a>.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">6. Data Security</h3>
+        <p>We take reasonable technical measures to protect your data, including password hashing and secure database connections. However, no online service can guarantee absolute security.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">7. Your Rights</h3>
+        <p>You can update your profile information anytime, delete tracked applications, or request full account deletion by contacting us. We'll remove your personal data within a reasonable timeframe, excluding data we're required to retain for legal reasons.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">8. Changes to This Policy</h3>
+        <p>We may update this policy occasionally. Material changes will be reflected by updating the date at the top of this page.</p>
+      </div>
+
+      <div>
+        <h3 style="color:var(--text);margin-bottom:8px;">9. Contact</h3>
+        <p>Questions about this policy? Reach out through the contact details on our platform.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
