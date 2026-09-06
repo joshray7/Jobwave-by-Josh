@@ -8,7 +8,7 @@
   <!-- Search bar -->
   <div class="card" style="margin-bottom:20px;">
     <form method="GET" action="/companies">
-      <div style="display:flex;gap:12px;align-items:center;">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <div style="flex:1;position:relative;">
           <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.85rem;"></i>
           <input name="q" value="{{ q }}" placeholder="Search companies…"
@@ -30,7 +30,7 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
     {% for company, count, latest in companies %}
     <a href="/company/{{ company|urlencode }}" class="card company-card" style="text-decoration:none;display:block;transition:transform 0.15s,box-shadow 0.15s;">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <div class="company-card-header">
         <div class="company-logo" style="width:48px;height:48px;font-size:1.2rem;flex-shrink:0;">
           {{ company[0]|upper }}
         </div>

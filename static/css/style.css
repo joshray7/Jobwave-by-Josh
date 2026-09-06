@@ -2,17 +2,17 @@
 
 /* ── NeonTide Design System ─────────────────────────────────────────────────── */
 :root {
-  --indigo: #2563eb;
+  --indigo: #3b00ff;
   --mint: #00c88a;
-  --indigo-dim: rgba(37,99,235,0.1);
+  --indigo-dim: rgba(59,0,255,0.1);
   --mint-dim: rgba(0,200,138,0.1);
-  --indigo-glow: rgba(37,99,235,0.25);
-  --mint-glow: rgba(0,200,138,0.25);
+  --indigo-glow: rgba(59,0,255,0.3);
+  --mint-glow: rgba(0,200,138,0.3);
   --bg: #050510;
   --bg2: #080818;
   --surface: #0d0d24;
   --surface2: #12122e;
-  --border: rgba(37,99,235,0.2);
+  --border: rgba(59,0,255,0.2);
   --border-mint: rgba(0,200,138,0.15);
   --text: #e8e8ff;
   --text-dim: #7878aa;
@@ -26,21 +26,21 @@
 
 /* ── Light Mode ── */
 [data-theme="light"] {
-  --indigo: #2563eb;
+  --indigo: #3b00ff;
   --mint: #00a572;
-  --indigo-dim: rgba(37,99,235,0.08);
+  --indigo-dim: rgba(59,0,255,0.08);
   --mint-dim: rgba(0,165,114,0.08);
-  --indigo-glow: rgba(37,99,235,0.18);
-  --mint-glow: rgba(0,165,114,0.18);
-  --bg: #f7f8fa;
-  --bg2: #eef0f3;
+  --indigo-glow: rgba(59,0,255,0.2);
+  --mint-glow: rgba(0,165,114,0.2);
+  --bg: #f0f0f8;
+  --bg2: #e8e8f4;
   --surface: #ffffff;
-  --surface2: #f4f5f7;
-  --border: rgba(37,99,235,0.15);
+  --surface2: #f4f4fc;
+  --border: rgba(59,0,255,0.15);
   --border-mint: rgba(0,165,114,0.15);
-  --text: #0f172a;
-  --text-dim: #475569;
-  --text-muted: #94a3b8;
+  --text: #0a0a1a;
+  --text-dim: #3a3a5c;
+  --text-muted: #8888aa;
 }
 
 [data-theme="light"] body::before {
@@ -256,13 +256,13 @@ a:hover { color: #fff; }
 .user-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: var(--mint);
+  background: linear-gradient(135deg, var(--indigo), var(--mint));
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
-  color: #05050f;
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -322,7 +322,7 @@ a:hover { color: #fff; }
   position: absolute;
   inset: -1px;
   border-radius: var(--radius);
-  background: var(--mint-glow);
+  background: linear-gradient(135deg, var(--mint-glow), var(--indigo-glow));
   z-index: -1;
   opacity: 0;
   transition: opacity 0.3s;
@@ -489,7 +489,7 @@ select.form-control { cursor: pointer; }
 .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 
 .job-card {
-  background: var(--mint);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
@@ -503,7 +503,7 @@ select.form-control { cursor: pointer; }
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: var(--mint);
+  background: linear-gradient(90deg, var(--indigo), var(--mint));
   opacity: 0;
   transition: opacity var(--transition);
 }
@@ -717,7 +717,10 @@ tr:hover td { background: var(--indigo-dim); }
 
 /* ── Gradient Text ── */
 .gradient-text {
-  color: var(--mint);
+  background: linear-gradient(135deg, #fff 0%, var(--mint) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* ── Divider ── */
@@ -1501,3 +1504,34 @@ tr[onclick]:hover td { background: var(--indigo-dim); }
   --col-red-dim: rgba(255,85,85,0.1);
 }
 
+/* Companies page mobile fixes */
+@media (max-width: 600px) {
+  .company-card { padding: 14px !important; }
+}
+
+/* Company cards — prevent overflow on long names */
+.company-card {
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.company-card * {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.company-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .company-card { padding: 14px !important; }
+  div[style*="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+}
