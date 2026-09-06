@@ -125,7 +125,7 @@
         {% if arrangement == 'Remote' %}🌐{% elif arrangement == 'Hybrid' %}🔀{% else %}🏢{% endif %} {{ arrangement }}
       </span>
       {% if not job.salary_min %}
-      <span class="badge badge-gray" style="opacity:0.7;">🔒 Salary not disclosed</span>
+      <span class="badge badge-gray" style="opacity:0.7;"> Salary not disclosed</span>
       {% endif %}
     </div>
 
@@ -141,14 +141,17 @@
     </div>
     {% endif %}
 
-    <div class="job-card-footer">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span class="job-time">{{ job.posted_ago }} · <i class="fa-regular fa-eye"></i> {{ job.views }}</span>
-        <span class="badge badge-gray" style="font-size:0.68rem;">{{ job.source }}</span>
-        {% if job.id in applied_ids %}<span class="badge badge-green">✓ Applied</span>{% endif %}
-      </div>
-      <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline btn-sm">View →</a>
-    </div>
+    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-card-link"> 
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"> 
+        <span class="job-time"> {{ job.posted_ago }} · <i class="fa-regular fa-eye"></i> {{ job.views }} </span> 
+        <span class="badge badge-gray" style="font-size:0.68rem;"> {{ job.source }} </span> 
+        {% if job.id in applied_ids %}
+        <span class="badge badge-green">✓ Applied</span> 
+        {% endif %} 
+      </div> 
+      <span class="btn btn-outline btn-sm">View →</span> 
+    </a>
+
   </div>
   {% endfor %}
 </div>

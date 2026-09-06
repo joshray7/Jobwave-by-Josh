@@ -1535,3 +1535,14 @@ tr[onclick]:hover td { background: var(--indigo-dim); }
     grid-template-columns: 1fr !important;
   }
 }
+
+
+.job-card-link { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  width: 100%; 
+  text-decoration: none; 
+  color: inherit; 
+  cursor: pointer; 
+}
