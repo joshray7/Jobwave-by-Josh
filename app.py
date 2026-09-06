@@ -63,6 +63,7 @@ class User(db.Model):
     applications = db.relationship('Application', backref='user', lazy=True, cascade='all, delete-orphan')
     alerts = db.relationship('Alert', backref='user', lazy=True, cascade='all, delete-orphan')
     profile = db.relationship('UserProfile', backref='user', uselist=False, cascade='all, delete-orphan')
+    username = db.Column(db.String(50), unique=True, nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -1611,6 +1612,24 @@ def reject_employer_job(job_id):
     job.rejection_reason = data.get('reason', '')[:500]
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/admin/logs')
+@login_required
+@admin_required
+def all_scraper_logs():
+    logs = ScraperLog.query.order_by(ScraperLog.started_at.desc()).limit(100).all()
+    return render_template('all_logs.html', logs=logs)
+
+@app.route('/admin/users')
+@login_required
+@admin_required
+def all_users():
+    q = request.args.get('q', '').strip()
+    query = User.query
+    if q:
+        query = query.filter(User.username.ilike(f'%{q}%'))
+    users = query.order_by(User.created_at.desc()).all()
+    return render_template('all_users.html', users=users, q=q)
 
 # ----- POSTING SECTION -------------------------------------
 

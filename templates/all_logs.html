@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}All Scraper Logs{% endblock %}
+{% block page_title %}Scraper Logs — Last 100 Runs{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
+{% endblock %}
+
+{% block content %}
+{% if logs %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Source</th>
+        <th>Status</th>
+        <th>Added</th>
+        <th>Started</th>
+        <th class="hide-mobile">Message</th>
+        <th>Jobs</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr style="cursor:pointer;" onclick="window.location='/admin/log/{{ log.id }}/jobs'">
+        <td style="font-weight:600;">{{ log.source }}</td>
+        <td>
+          <span class="badge {% if log.status == 'success' %}badge-green{% elif log.status == 'failed' %}badge-red{% else %}badge-amber{% endif %}">
+            {{ log.status }}
+          </span>
+        </td>
+        <td style="color:var(--mint);font-weight:600;">+{{ log.jobs_added }}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.started_at.strftime('%b %d, %H:%M') }}</td>
+        <td class="hide-mobile" style="font-size:0.78rem;color:var(--text-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.message or '-' }}</td>
+        <td>
+          <a href="/admin/log/{{ log.id }}/jobs" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()"><i class="fa-solid fa-eye"></i></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-clipboard-list" style="font-size:48px;opacity:0.3;"></i></div>
+  <h3>No scraper runs yet</h3>
+</div>
+{% endif %}
+{% endblock %}

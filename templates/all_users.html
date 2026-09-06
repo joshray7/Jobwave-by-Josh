@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}All Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="GET" action="{{ url_for('all_users') }}" style="display:flex;gap:10px;">
+    <div class="search-bar" style="flex:1;">
+      <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search by username...">
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if q %}<a href="{{ url_for('all_users') }}" class="btn btn-outline">Clear</a>{% endif %}
+  </form>
+</div>
+
+<div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-muted);">{{ users|length }} user{{ 's' if users|length != 1 }}{% if q %} matching "{{ q }}"{% endif %}</div>
+
+{% if users %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Name</th>
+        <th class="hide-mobile">Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th class="hide-mobile">Joined</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td style="font-weight:600;">{{ user.username or '-' }}</td>
+        <td>{{ user.name }}</td>
+        <td class="hide-mobile" style="color:var(--text-muted);font-size:0.82rem;">{{ user.email }}</td>
+        <td><span class="badge {% if user.role == 'admin' %}badge-mint{% elif user.role == 'employer' %}badge-amber{% else %}badge-gray{% endif %}">{{ user.role }}</span></td>
+        <td>
+          <span class="badge {% if user.is_active %}badge-green{% else %}badge-red{% endif %}">
+            {{ 'Active' if user.is_active else 'Inactive' }}
+          </span>
+        </td>
+        <td class="hide-mobile" style="color:var(--text-muted);font-size:0.8rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+        <td>
+          {% if user.id != current_user.id %}
+          <button class="btn btn-outline btn-sm toggle-user-btn" data-user-id="{{ user.id }}">
+            {{ 'Deactivate' if user.is_active else 'Activate' }}
+          </button>
+          {% else %}
+          <span style="font-size:0.78rem;color:var(--text-muted);">You</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-users" style="font-size:48px;opacity:0.3;"></i></div>
+  <h3>No users found</h3>
+  {% if q %}<p>No username matching "{{ q }}".</p>{% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.toggle-user-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.dataset.userId;
+    try {
+      const res = await fetch(`/admin/users/${id}/toggle`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) location.reload();
+    } catch { showToast('Failed to update user', 'error'); }
+  });
+});
+</script>
+{% endblock %}

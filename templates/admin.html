@@ -106,10 +106,13 @@
   </div>
 
   <!-- Scraper logs -->
-  <div class="card" style="margin-bottom:20px;" id="logs-card">
+  <div class="card" style="margin-bottom:20px;">
     <div class="section-header">
       <div class="section-title">Scraper Logs</div>
-      <span style="font-size:0.8rem;color:var(--text-muted);" id="logs-subtitle">Last 20 runs · click a row to view jobs</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:0.8rem;color:var(--text-muted);" id="logs-subtitle">Last 20 runs · click a row to view jobs</span>
+        <a href="{{ url_for('all_scraper_logs') }}" class="btn btn-outline btn-sm">View Last 100 →</a>
+      </div>
     </div>
     <div id="logs-table-wrap">
       {% if logs %}
@@ -160,7 +163,10 @@
   <div class="card">
     <div class="section-header">
       <div class="section-title">User Management</div>
-      <span style="font-size:0.8rem;color:var(--text-muted);">{{ users|length }} users</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:0.8rem;color:var(--text-muted);">{{ users|length }} users</span>
+        <a href="{{ url_for('all_users') }}" class="btn btn-outline btn-sm">Search Users →</a>
+      </div>
     </div>
     <div class="table-wrap" style="margin-top:12px;">
       <table>
