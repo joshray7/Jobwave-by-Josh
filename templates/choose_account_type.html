@@ -1,6 +1,31 @@
-{% extends 'base.html' %}
-{% block title %}Get Started{% endblock %}
-{% block public_content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Started — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+  <style>
+    .account-type-card {
+      display: flex; align-items: center; gap: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      transition: var(--transition);
+    }
+    .account-type-card i { font-size: 20px; color: var(--text-muted); width: 24px; text-align: center; }
+    .type-radio:checked + .account-type-card {
+      border-color: var(--mint);
+      background: var(--mint-dim);
+    }
+    .type-radio:checked + .account-type-card i { color: var(--mint); }
+  </style>
+</head>
+<body>
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
@@ -39,20 +64,5 @@
     </form>
   </div>
 </div>
-
-<style>
-.account-type-card {
-  display: flex; align-items: center; gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  transition: var(--transition);
-}
-.account-type-card i { font-size: 20px; color: var(--text-muted); width: 24px; text-align: center; }
-.type-radio:checked + .account-type-card {
-  border-color: var(--mint);
-  background: var(--mint-dim);
-}
-.type-radio:checked + .account-type-card i { color: var(--mint); }
-</style>
-{% endblock %}
+</body>
+</html>

@@ -265,8 +265,6 @@ def enforce_onboarding():
         return
     if request.endpoint.startswith('static'):
         return
-    if not current_user.is_verified:
-        return redirect(url_for('pending_verification'))
     if current_user.role not in ('user', 'employer', 'admin'):
         return redirect(url_for('choose_account_type'))
 
@@ -314,22 +312,16 @@ def register():
             is_first_user = User.query.count() == 0
             user = User(name=name, email=email, username=username,
                        role='admin' if is_first_user else 'pending',
-                       is_verified=is_first_user)
+                       is_verified=True)
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
             login_user(user)
-
-            if not is_first_user:
-                from mailer import send_verification_email
-                try:
-                    send_verification_email(user.email, user.name)
-                except Exception as e:
-                    app.logger.error(f"Verification email failed: {e}")
-                return redirect(url_for('pending_verification'))
-
             flash(f'Welcome aboard, {name}!', 'success')
-            return redirect(url_for('dashboard'))
+
+            if is_first_user:
+                return redirect(url_for('dashboard'))
+            return redirect(url_for('choose_account_type'))
     return render_template('register.html')
 
 @app.route('/api/check-username')
@@ -1955,7 +1947,8 @@ def resend_verification():
     try:
         send_verification_email(current_user.email, current_user.name)
         flash('Verification email sent again. Check your inbox.', 'success')
-    except Exception:
+    except Exception as e:
+        app.logger.error(f"Resend verification failed: {e}")
         flash('Failed to send email. Please try again shortly.', 'error')
     return redirect(url_for('pending_verification'))
 

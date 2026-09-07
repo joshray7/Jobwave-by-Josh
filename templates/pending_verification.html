@@ -1,6 +1,16 @@
-{% extends 'base.html' %}
-{% block title %}Verify Your Email{% endblock %}
-{% block public_content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+</head>
+<body>
 <div class="auth-page">
   <div class="auth-card" style="text-align:center;">
     <div class="auth-logo">
@@ -27,4 +37,5 @@
     </div>
   </div>
 </div>
-{% endblock %}
+</body>
+</html>
