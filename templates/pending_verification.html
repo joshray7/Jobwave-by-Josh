@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Verify Your Email{% endblock %}
+{% block public_content %}
+<div class="auth-page">
+  <div class="auth-card" style="text-align:center;">
+    <div class="auth-logo">
+      <div class="logo-mark">JW</div>
+      <div class="logo-text">Job<span>Wave</span></div>
+    </div>
+
+    <i class="fa-solid fa-envelope-circle-check" style="font-size:40px;color:var(--mint);margin-bottom:16px;"></i>
+    <div class="auth-title">Check your email</div>
+    <div class="auth-subtitle">We sent a verification link to <strong>{{ current_user.email }}</strong>. Click it to activate your account.</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for category, msg in messages %}
+      <div class="flash {{ category }}" style="margin-top:16px;">{{ msg }}</div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('resend_verification') }}" style="margin-top:20px;">
+      <button type="submit" class="btn btn-outline auth-submit">Resend Verification Email</button>
+    </form>
+
+    <div class="auth-footer">
+      <a href="{{ url_for('logout') }}">Sign out</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

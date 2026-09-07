@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact — JobWave</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('jw-theme') || 'dark');
+  </script>
+</head>
+<body>
+<div class="landing">
+  <div class="landing-nav">
+    <a href="{{ url_for('index') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <div class="logo-mark">JW</div>
+      <div class="logo-text">Job<span>Wave</span></div>
+    </a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">Back Home</a>
+  </div>
+
+  <div style="max-width:600px;margin:0 auto;padding:60px 20px;text-align:center;">
+    <h1 style="font-size:1.8rem;margin-bottom:10px;">Get in Touch</h1>
+    <p style="color:var(--text-muted);margin-bottom:40px;">Questions, feedback, or an issue to report? Reach us directly.</p>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <a href="mailto:raymondehiz07@gmail.com" class="card" style="display:flex;align-items:center;gap:16px;text-decoration:none;color:var(--text);">
+        <div style="width:44px;height:44px;border-radius:10px;background:var(--indigo-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid fa-envelope" style="color:var(--indigo);font-size:18px;"></i>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-weight:700;font-size:0.95rem;">Email</div>
+          <div style="color:var(--text-muted);font-size:0.85rem;">raymondehiz07@gmail.com</div>
+        </div>
+      </a>
+
+      <a href="https://wa.me/23439382808" target="_blank" class="card" style="display:flex;align-items:center;gap:16px;text-decoration:none;color:var(--text);">
+        <div style="width:44px;height:44px;border-radius:10px;background:var(--mint-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-brands fa-whatsapp" style="color:var(--mint);font-size:18px;"></i>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-weight:700;font-size:0.95rem;">WhatsApp</div>
+          <div style="color:var(--text-muted);font-size:0.85rem;">Message us directly</div>
+        </div>
+      </a>
+
+      <a href="https://t.me/@RayehikMEMES" target="_blank" class="card" style="display:flex;align-items:center;gap:16px;text-decoration:none;color:var(--text);">
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-brands fa-telegram" style="color:var(--indigo);font-size:18px;"></i>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-weight:700;font-size:0.95rem;">Telegram</div>
+          <div style="color:var(--text-muted);font-size:0.85rem;">Chat with us on Telegram</div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -41,6 +41,10 @@ def run_daily_scraper(app):
                     if source_id in seen_in_batch:
                         continue
                     seen_in_batch.add(source_id)
+                    if jd.get('title'):
+                        jd['title'] = jd['title'][:490]
+                    if jd.get('company'):
+                        jd['company'] = jd['company'][:290]
                     if not Job.query.filter_by(source_id=source_id).first():
                         db.session.add(Job(**jd))
                         added += 1

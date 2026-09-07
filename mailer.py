@@ -6,6 +6,12 @@ Handles all outgoing emails: alerts, password reset, welcome.
 import resend
 import os
 from datetime import datetime
+from itsdangerous import URLSafeTimedSerializer
+
+APP_SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-change-me')
+
+def get_verification_serializer():
+    return URLSafeTimedSerializer(APP_SECRET_KEY)
 
 def get_client():
     api_key = os.environ.get('RESEND_API_KEY', '')
@@ -205,3 +211,28 @@ def send_welcome(to_email: str, name: str):
         "subject": f"Welcome to JobWave, {name}!",
         "html": base_html("Welcome", body),
     }})
+
+
+def get_verification_serializer():
+    return URLSafeTimedSerializer(APP_SECRET_KEY)
+
+
+def send_verification_email(to_email: str, name: str):
+    serializer = get_verification_serializer()
+    token = serializer.dumps(to_email, salt='email-verify')
+    verify_link = f"{APP_URL}/verify-email/{token}"
+
+    body = f"""
+      <h1>Confirm your email</h1>
+      <p>Hi {name}, welcome to JobWave. Please confirm your email address to activate your account.</p>
+      <a href="{verify_link}" class="btn">Verify Email Address</a>
+      <div class="divider"></div>
+      <p style="font-size:0.78rem;">If you didn't create a JobWave account, you can ignore this email.</p>
+    """
+    client = get_client()
+    client.Emails.send({
+        "from": f"{APP_NAME} <{FROM_EMAIL}>",
+        "to": [to_email],
+        "subject": "Confirm your JobWave account",
+        "html": base_html("Verify Your Email", body),
+    })

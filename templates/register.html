@@ -19,27 +19,6 @@
     {% endwith %}
 
     <form method="POST" class="auth-form">
-
-      <div class="form-group">
-        <label class="form-label">I'm signing up as</label>
-        <div style="display:flex;gap:10px;">
-          <label style="flex:1;cursor:pointer;">
-            <input type="radio" name="account_type" value="user" checked style="display:none;" class="account-type-radio">
-            <div class="account-type-option selected" data-type="user">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <div>Job Seeker</div>
-            </div>
-          </label>
-          <label style="flex:1;cursor:pointer;">
-            <input type="radio" name="account_type" value="employer" style="display:none;" class="account-type-radio">
-            <div class="account-type-option" data-type="employer">
-              <i class="fa-solid fa-building"></i>
-              <div>Employer</div>
-            </div>
-          </label>
-        </div>
-      </div>
-
       <div class="form-group">
         <label class="form-label">Full name</label>
         <input type="text" name="name" class="form-control" placeholder="Your name" required autocomplete="name">

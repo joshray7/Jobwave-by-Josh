@@ -49,6 +49,7 @@ def on_rate_limit_exceeded(e):
 
 app.register_error_handler(429, on_rate_limit_exceeded)
 
+
 # ─── Models ────────────────────────────────────────────────────────────────────
 
 class User(db.Model):
@@ -64,6 +65,7 @@ class User(db.Model):
     alerts = db.relationship('Alert', backref='user', lazy=True, cascade='all, delete-orphan')
     profile = db.relationship('UserProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     username = db.Column(db.String(50), unique=True, nullable=True)
+    is_verified = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -104,8 +106,8 @@ class UserProfile(db.Model):
 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    company = db.Column(db.String(200), nullable=False)
+    title = db.Column(db.String(500), nullable=False)
+    company = db.Column(db.String(300), nullable=False)
     location = db.Column(db.String(200))
     job_type = db.Column(db.String(50))          # full-time | part-time | remote | contract
     experience = db.Column(db.String(50))         # entry | mid | senior
@@ -240,6 +242,34 @@ def employer_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def get_verification_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+
+PUBLIC_ENDPOINTS = {
+    'index', 'login', 'register', 'logout', 'static',
+    'forgot_password', 'reset_password',
+    'privacy', 'terms', 'faq', 'contact',
+    'verify_email', 'resend_verification', 'pending_verification',
+    'choose_account_type',
+    'ping',
+    'cron_run_scrapers', 'cron_run_alerts', 'cron_expire_jobs',
+    'check_username',
+}
+
+@app.before_request
+def enforce_onboarding():
+    if not current_user.is_authenticated:
+        return
+    if request.endpoint in PUBLIC_ENDPOINTS or request.endpoint is None:
+        return
+    if request.endpoint.startswith('static'):
+        return
+    if not current_user.is_verified:
+        return redirect(url_for('pending_verification'))
+    if current_user.role not in ('user', 'employer', 'admin'):
+        return redirect(url_for('choose_account_type'))
+
 
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
 
@@ -266,7 +296,6 @@ def register():
         username = request.form.get('username', '').strip().lower()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        account_type = request.form.get('account_type', 'user')
 
         import re
         username_valid = bool(re.match(r'^[a-z0-9_]{3,20}$', username))
@@ -274,31 +303,31 @@ def register():
         if not name or not email or not password or not username:
             flash('All fields are required.', 'error')
         elif not username_valid:
-            flash('Username must be 3-20 characters, lowercase letters, numbers, and underscores only.', 'error')
+            flash('Username must be 3-20 characters: lowercase letters, numbers, underscores only.', 'error')
         elif User.query.filter_by(username=username).first():
             flash('That username is already taken.', 'error')
         elif User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
         elif len(password) < 6:
             flash('Password must be at least 6 characters.', 'error')
-        elif account_type not in ('user', 'employer'):
-            flash('Invalid account type.', 'error')
         else:
-            user = User(name=name, email=email, username=username, role=account_type)
+            is_first_user = User.query.count() == 0
+            user = User(name=name, email=email, username=username,
+                       role='admin' if is_first_user else 'pending',
+                       is_verified=is_first_user)
             user.set_password(password)
-            # First user ever becomes admin, overriding their chosen type
-            if User.query.count() == 0:
-                user.role = 'admin'
             db.session.add(user)
             db.session.commit()
             login_user(user)
-            try:
-                from mailer import send_welcome
-                t = threading.Thread(target=send_welcome, args=(user.email, user.name))
-                t.daemon = True
-                t.start()
-            except Exception:
-                pass
+
+            if not is_first_user:
+                from mailer import send_verification_email
+                try:
+                    send_verification_email(user.email, user.name)
+                except Exception as e:
+                    app.logger.error(f"Verification email failed: {e}")
+                return redirect(url_for('pending_verification'))
+
             flash(f'Welcome aboard, {name}!', 'success')
             return redirect(url_for('dashboard'))
     return render_template('register.html')
@@ -1210,6 +1239,10 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                 if source_id in seen_in_batch:
                     continue
                 seen_in_batch.add(source_id)
+                if jd.get('title'):
+                    jd['title'] = jd['title'][:490]
+                if jd.get('company'):
+                    jd['company'] = jd['company'][:290]
                 if not Job.query.filter_by(source_id=source_id).first():
                     db.session.add(Job(**jd))
                     added += 1
@@ -1876,6 +1909,76 @@ def api_jobs():
         'salary_min': j.salary_min, 'salary_max': j.salary_max
     } for j in jobs])
 
+
+#------ EMAIL VERIFICATION AND PASSWORD RESET -----------------
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    serializer = get_verification_serializer()
+    try:
+        email = serializer.loads(token, salt='email-verify', max_age=86400)
+    except SignatureExpired:
+        flash('That verification link has expired. Please request a new one.', 'error')
+        return redirect(url_for('pending_verification'))
+    except BadSignature:
+        flash('Invalid verification link.', 'error')
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('Account not found.', 'error')
+        return redirect(url_for('login'))
+
+    user.is_verified = True
+    db.session.commit()
+    flash('Email verified! Let\'s finish setting up your account.', 'success')
+
+    if current_user.is_authenticated and current_user.id == user.id:
+        return redirect(url_for('choose_account_type'))
+    return redirect(url_for('login'))
+
+
+@app.route('/pending-verification')
+@login_required
+def pending_verification():
+    if current_user.is_verified:
+        return redirect(url_for('choose_account_type'))
+    return render_template('pending_verification.html')
+
+
+@app.route('/resend-verification', methods=['POST'])
+@login_required
+@limiter.limit('3 per hour')
+def resend_verification():
+    if current_user.is_verified:
+        return redirect(url_for('choose_account_type'))
+    from mailer import send_verification_email
+    try:
+        send_verification_email(current_user.email, current_user.name)
+        flash('Verification email sent again. Check your inbox.', 'success')
+    except Exception:
+        flash('Failed to send email. Please try again shortly.', 'error')
+    return redirect(url_for('pending_verification'))
+
+
+@app.route('/choose-account-type', methods=['GET', 'POST'])
+@login_required
+def choose_account_type():
+    if not current_user.is_verified:
+        return redirect(url_for('pending_verification'))
+    if current_user.role in ('user', 'employer', 'admin'):
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        account_type = request.form.get('account_type')
+        if account_type not in ('user', 'employer'):
+            flash('Please select an option.', 'error')
+            return render_template('choose_account_type.html')
+        current_user.role = account_type
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+
+    return render_template('choose_account_type.html')
+
 # ----------- TERMS OF SERVICE AND PRIVACY POLICY PAGES -----------------
 @app.route('/privacy')
 def privacy():
@@ -1888,6 +1991,10 @@ def terms():
 @app.route('/faq')
 def faq():
     return render_template('faq.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 
