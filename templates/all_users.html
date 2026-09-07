@@ -12,7 +12,7 @@
   <form method="GET" action="{{ url_for('all_users') }}" style="display:flex;gap:10px;">
     <div class="search-bar" style="flex:1;">
       <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-      <input type="text" name="q" value="{{ q }}" placeholder="Search by username...">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search by name or username...">
     </div>
     <button type="submit" class="btn btn-primary">Search</button>
     {% if q %}<a href="{{ url_for('all_users') }}" class="btn btn-outline">Clear</a>{% endif %}

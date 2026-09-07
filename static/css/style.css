@@ -1536,7 +1536,6 @@ tr[onclick]:hover td { background: var(--indigo-dim); }
   }
 }
 
-
 .job-card-link { 
   display: flex; 
   align-items: center; 

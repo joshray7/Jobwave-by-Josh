@@ -263,24 +263,35 @@ def register():
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
+        username = request.form.get('username', '').strip().lower()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        if not name or not email or not password:
+        account_type = request.form.get('account_type', 'user')
+
+        import re
+        username_valid = bool(re.match(r'^[a-z0-9_]{3,20}$', username))
+
+        if not name or not email or not password or not username:
             flash('All fields are required.', 'error')
+        elif not username_valid:
+            flash('Username must be 3-20 characters, lowercase letters, numbers, and underscores only.', 'error')
+        elif User.query.filter_by(username=username).first():
+            flash('That username is already taken.', 'error')
         elif User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
         elif len(password) < 6:
             flash('Password must be at least 6 characters.', 'error')
+        elif account_type not in ('user', 'employer'):
+            flash('Invalid account type.', 'error')
         else:
-            user = User(name=name, email=email)
+            user = User(name=name, email=email, username=username, role=account_type)
             user.set_password(password)
-            # First user becomes admin
+            # First user ever becomes admin, overriding their chosen type
             if User.query.count() == 0:
                 user.role = 'admin'
             db.session.add(user)
             db.session.commit()
             login_user(user)
-            # Send welcome email in background
             try:
                 from mailer import send_welcome
                 t = threading.Thread(target=send_welcome, args=(user.email, user.name))
@@ -292,6 +303,14 @@ def register():
             return redirect(url_for('dashboard'))
     return render_template('register.html')
 
+@app.route('/api/check-username')
+def check_username():
+    username = request.args.get('username', '').strip().lower()
+    import re
+    if not re.match(r'^[a-z0-9_]{3,20}$', username):
+        return jsonify({'available': False, 'reason': 'invalid'})
+    exists = User.query.filter_by(username=username).first() is not None
+    return jsonify({'available': not exists, 'reason': 'taken' if exists else None})
 
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit('10 per minute; 50 per hour', methods=['POST'])
@@ -1627,9 +1646,58 @@ def all_users():
     q = request.args.get('q', '').strip()
     query = User.query
     if q:
-        query = query.filter(User.username.ilike(f'%{q}%'))
+        search = f'%{q}%'
+        query = query.filter(
+            db.or_(User.username.ilike(search), User.name.ilike(search))
+        )
     users = query.order_by(User.created_at.desc()).all()
     return render_template('all_users.html', users=users, q=q)
+
+CRON_SECRET = os.environ.get('CRON_SECRET', '')
+
+
+def require_cron_secret():
+    key = request.args.get('key', '')
+    return bool(CRON_SECRET) and key == CRON_SECRET
+
+
+@app.route('/internal/cron/run-scrapers')
+def cron_run_scrapers():
+    if not require_cron_secret():
+        return jsonify({'error': 'unauthorized'}), 403
+    from scheduler import run_daily_scraper
+    t = threading.Thread(target=run_daily_scraper, args=(app,))
+    t.daemon = True
+    t.start()
+    return jsonify({'success': True, 'message': 'Scraper run started'})
+
+
+@app.route('/internal/cron/run-alerts')
+def cron_run_alerts():
+    if not require_cron_secret():
+        return jsonify({'error': 'unauthorized'}), 403
+    from scheduler import run_alert_emails
+    t = threading.Thread(target=run_alert_emails, args=(app,))
+    t.daemon = True
+    t.start()
+    return jsonify({'success': True, 'message': 'Alert run started'})
+
+
+@app.route('/internal/cron/expire-jobs')
+def cron_expire_jobs():
+    if not require_cron_secret():
+        return jsonify({'error': 'unauthorized'}), 403
+    from scheduler import run_job_expiry
+    t = threading.Thread(target=run_job_expiry, args=(app,))
+    t.daemon = True
+    t.start()
+    return jsonify({'success': True, 'message': 'Job expiry started'})
+
+
+@app.route('/ping')
+def ping():
+    return jsonify({'status': 'awake'})
+
 
 # ----- POSTING SECTION -------------------------------------
 

@@ -19,21 +19,51 @@
     {% endwith %}
 
     <form method="POST" class="auth-form">
+
+      <div class="form-group">
+        <label class="form-label">I'm signing up as</label>
+        <div style="display:flex;gap:10px;">
+          <label style="flex:1;cursor:pointer;">
+            <input type="radio" name="account_type" value="user" checked style="display:none;" class="account-type-radio">
+            <div class="account-type-option selected" data-type="user">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <div>Job Seeker</div>
+            </div>
+          </label>
+          <label style="flex:1;cursor:pointer;">
+            <input type="radio" name="account_type" value="employer" style="display:none;" class="account-type-radio">
+            <div class="account-type-option" data-type="employer">
+              <i class="fa-solid fa-building"></i>
+              <div>Employer</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Full name</label>
         <input type="text" name="name" class="form-control" placeholder="Your name" required autocomplete="name">
       </div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" id="username-input" class="form-control" placeholder="yourname" required autocomplete="off" pattern="[a-z0-9_]{3,20}">
+        <div id="username-status" style="font-size:0.78rem;margin-top:4px;min-height:16px;"></div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Email address</label>
         <input type="email" name="email" class="form-control" placeholder="you@example.com" required autocomplete="email">
       </div>
+
       <div class="form-group">
         <label class="form-label">
           Password <span class="label-hint">(min. 6 chars)</span>
         </label>
         <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6" autocomplete="new-password">
       </div>
-      <button type="submit" class="btn btn-mint auth-submit">Create Account →</button>
+
+      <button type="submit" class="btn btn-mint auth-submit" id="submit-btn">Create Account →</button>
     </form>
 
     <div class="auth-footer">
@@ -42,4 +72,63 @@
 
   </div>
 </div>
+
+<style>
+.account-type-option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 12px;
+  text-align: center;
+  transition: var(--transition);
+  color: var(--text-dim);
+}
+.account-type-option i { display: block; font-size: 18px; margin-bottom: 6px; }
+.account-type-option.selected {
+  border-color: var(--mint);
+  background: var(--mint-dim);
+  color: var(--mint);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.account-type-radio').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.account-type-option').forEach(opt => opt.classList.remove('selected'));
+    document.querySelector(`.account-type-option[data-type="${radio.value}"]`).classList.add('selected');
+  });
+});
+
+const usernameInput = document.getElementById('username-input');
+const usernameStatus = document.getElementById('username-status');
+const submitBtn = document.getElementById('submit-btn');
+let debounceTimer;
+
+usernameInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const value = usernameInput.value.trim().toLowerCase();
+  if (!value) { usernameStatus.textContent = ''; return; }
+
+  debounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/check-username?username=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      if (data.reason === 'invalid') {
+        usernameStatus.textContent = '3-20 characters: lowercase letters, numbers, underscores only';
+        usernameStatus.style.color = '#ff5555';
+        submitBtn.disabled = true;
+      } else if (!data.available) {
+        usernameStatus.textContent = 'Username already taken';
+        usernameStatus.style.color = '#ff5555';
+        submitBtn.disabled = true;
+      } else {
+        usernameStatus.textContent = 'Username available';
+        usernameStatus.style.color = 'var(--mint)';
+        submitBtn.disabled = false;
+      }
+    } catch { usernameStatus.textContent = ''; }
+  }, 400);
+});
+</script>
 {% endblock %}
