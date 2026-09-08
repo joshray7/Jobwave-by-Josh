@@ -98,11 +98,13 @@
 
     <div class="sidebar-footer">
       <div style="padding:0 12px 10px;display:flex;gap:6px;align-items:center;justify-content:center;">
-        <a href="{{ url_for('faq') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">FAQ</a>
+        <a href="{{ url_for('faq') }}" style="font-size:0.72rem;font-weight:600;color:var(--text-dim);padding:3px 8px;border-radius:4px;transition:var(--transition);">FAQ</a>
         <span style="color:var(--border);font-size:0.6rem;">•</span>
-        <a href="{{ url_for('privacy') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">Privacy</a>
+        <a href="{{ url_for('privacy') }}" style="font-size:0.72rem;font-weight:600;color:var(--text-dim);padding:3px 8px;border-radius:4px;transition:var(--transition);">Privacy</a>
         <span style="color:var(--border);font-size:0.6rem;">•</span>
-        <a href="{{ url_for('terms') }}" style="font-size:0.7rem;color:var(--text-muted);padding:3px 8px;border-radius:4px;transition:var(--transition);">Terms</a>
+        <a href="{{ url_for('terms') }}" style="font-size:0.72rem;font-weight:600;color:var(--text-dim);padding:3px 8px;border-radius:4px;transition:var(--transition);">Terms</a>
+        <span style="color:var(--border);font-size:0.6rem;">•</span>
+        <a href="{{ url_for('contact') }}" style="font-size:0.72rem;font-weight:600;color:var(--text-dim);padding:3px 8px;border-radius:4px;transition:var(--transition);">Contact</a>
       </div>
       <div class="user-card">
         <div class="user-avatar">{{ current_user.name[0].upper() }}</div>

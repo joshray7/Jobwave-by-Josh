@@ -269,6 +269,23 @@ def enforce_onboarding():
         return redirect(url_for('choose_account_type'))
 
 
+def validate_username(username):
+    """Returns None if valid, otherwise a specific error message."""
+    if not username:
+        return 'Username is required.'
+    if len(username) < 3:
+        return 'Username must be at least 3 characters.'
+    if len(username) > 20:
+        return 'Username must be 20 characters or fewer.'
+    if username != username.lower():
+        return 'Username must be lowercase only.'
+    if ' ' in username:
+        return "Username can't contain spaces."
+    if not re.match(r'^[a-z0-9_]+$', username):
+        return 'Username can only contain lowercase letters, numbers, and underscores.'
+    return None
+
+
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -291,20 +308,17 @@ def register():
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
-        username = request.form.get('username', '').strip().lower()
+        username_raw = request.form.get('username', '').strip()
+        username_error = validate_username(username_raw)
+        username = username_raw.lower()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
-        import re
-        username_valid = bool(re.match(r'^[a-z0-9_]{3,20}$', username))
-
-        if not name or not email or not password or not username:
+        if not name or not email or not password or not username_raw:
             flash('All fields are required.', 'error')
-        elif not username_valid:
-            flash('Username must be 3-20 characters: lowercase letters, numbers, underscores only.', 'error')
+        elif username_error:
+            flash(username_error, 'error')
         elif User.query.filter_by(username=username).first():
-            flash('That username is already taken.', 'error')
-        elif User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
         elif len(password) < 6:
             flash('Password must be at least 6 characters.', 'error')
@@ -326,12 +340,14 @@ def register():
 
 @app.route('/api/check-username')
 def check_username():
-    username = request.args.get('username', '').strip().lower()
-    import re
-    if not re.match(r'^[a-z0-9_]{3,20}$', username):
-        return jsonify({'available': False, 'reason': 'invalid'})
-    exists = User.query.filter_by(username=username).first() is not None
-    return jsonify({'available': not exists, 'reason': 'taken' if exists else None})
+    raw = request.args.get('username', '').strip()
+    error = validate_username(raw)
+    if error:
+        return jsonify({'available': False, 'reason': error})
+    exists = User.query.filter_by(username=raw.lower()).first() is not None
+    if exists:
+        return jsonify({'available': False, 'reason': 'Username already taken.'})
+    return jsonify({'available': True, 'reason': None})
 
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit('10 per minute; 50 per hour', methods=['POST'])

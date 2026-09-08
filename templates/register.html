@@ -26,7 +26,7 @@
 
       <div class="form-group">
         <label class="form-label">Username</label>
-        <input type="text" name="username" id="username-input" class="form-control" placeholder="yourname" required autocomplete="off" pattern="[a-z0-9_]{3,20}">
+        <input type="text" name="username" id="username-input" class="form-control" placeholder="yourname" required autocomplete="off">
         <div id="username-status" style="font-size:0.78rem;margin-top:4px;min-height:16px;"></div>
       </div>
 
@@ -86,19 +86,15 @@ let debounceTimer;
 
 usernameInput.addEventListener('input', () => {
   clearTimeout(debounceTimer);
-  const value = usernameInput.value.trim().toLowerCase();
-  if (!value) { usernameStatus.textContent = ''; return; }
+  const value = usernameInput.value.trim();
+  if (!value) { usernameStatus.textContent = ''; submitBtn.disabled = false; return; }
 
   debounceTimer = setTimeout(async () => {
     try {
       const res = await fetch(`/api/check-username?username=${encodeURIComponent(value)}`);
       const data = await res.json();
-      if (data.reason === 'invalid') {
-        usernameStatus.textContent = '3-20 characters: lowercase letters, numbers, underscores only';
-        usernameStatus.style.color = '#ff5555';
-        submitBtn.disabled = true;
-      } else if (!data.available) {
-        usernameStatus.textContent = 'Username already taken';
+      if (!data.available) {
+        usernameStatus.textContent = data.reason;
         usernameStatus.style.color = '#ff5555';
         submitBtn.disabled = true;
       } else {

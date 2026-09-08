@@ -243,6 +243,13 @@ a:hover { color: #fff; }
   border-top: 1px solid var(--border);
 }
 
+.sidebar-footer a:hover {
+  background: var(--indigo-dim);
+  color: var(--text);
+}
+
+
+
 .user-card {
   display: flex;
   align-items: center;
