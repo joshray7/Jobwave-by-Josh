@@ -72,6 +72,9 @@
       <a href="{{ url_for('employer_job_queue') }}" class="nav-link {% if request.endpoint == 'employer_job_queue' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-user-tie"></i></span> Job Approvals
       </a>
+      <a href="{{ url_for('admin_feedback') }}" class="nav-link {% if request.endpoint == 'admin_feedback' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-comment-dots"></i></span> Feedback
+      </a>
       {% endif %}
 
       {% if current_user.role == 'employer' %}
@@ -87,6 +90,9 @@
       <span class="nav-section-label">Account</span>
       <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
         <span class="nav-icon"><i class="fa-solid fa-user"></i></span> My Profile
+      </a>
+      <a href="{{ url_for('feedback') }}" class="nav-link {% if request.endpoint == 'feedback' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-comment-dots"></i></span> Feedback
       </a>
       <a href="{{ url_for('export_jobs') }}" class="nav-link">
         <span class="nav-icon"><i class="fa-solid fa-download"></i></span> Export Data

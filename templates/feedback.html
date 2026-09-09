@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Feedback{% endblock %}
+{% block page_title %}Send Feedback{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:560px;margin:0 auto;">
+  <div style="margin-bottom:20px;">
+    <div style="font-weight:800;font-size:1.1rem;">We'd like to hear from you</div>
+    <div style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">Report a bug, suggest a feature, or just tell us how it's going.</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, msg in messages %}
+    <div class="flash {{ category }}" style="margin-bottom:16px;">{{ msg }}</div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+
+  <form method="POST" class="auth-form">
+    <input type="hidden" name="page_url" id="page-url-input">
+
+    <div class="form-group">
+      <label class="form-label">What's this about?</label>
+      <select name="category" class="form-control">
+        <option value="general">General feedback</option>
+        <option value="bug">Something's broken</option>
+        <option value="feature">Feature suggestion</option>
+        <option value="praise">Just saying thanks</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">How's your experience been so far? <span class="label-hint">(optional)</span></label>
+      <div style="display:flex;gap:8px;" id="rating-stars">
+        {% for i in range(1, 6) %}
+        <button type="button" class="rating-star" data-value="{{ i }}" style="background:none;border:none;font-size:24px;color:var(--border);cursor:pointer;transition:var(--transition);">★</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="rating" id="rating-input">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Your message</label>
+      <textarea name="message" class="form-control" rows="6" placeholder="Tell us what's on your mind..." required></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-mint auth-submit">Send Feedback</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('page-url-input').value = document.referrer || '';
+
+let selectedRating = 0;
+document.querySelectorAll('.rating-star').forEach(star => {
+  star.addEventListener('click', () => {
+    selectedRating = parseInt(star.dataset.value);
+    document.getElementById('rating-input').value = selectedRating;
+    document.querySelectorAll('.rating-star').forEach(s => {
+      s.style.color = parseInt(s.dataset.value) <= selectedRating ? 'var(--mint)' : 'var(--border)';
+    });
+  });
+});
+</script>
+{% endblock %}

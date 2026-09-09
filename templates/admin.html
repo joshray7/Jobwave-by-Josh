@@ -48,8 +48,8 @@
         <a href="{{ url_for('find_duplicates') }}" class="btn btn-outline btn-sm">
           <i class="fa-solid fa-copy"></i> Find Duplicates
         </a>
-        <button class="btn btn-outline btn-sm" id="clear-fake-btn">
-          <i class="fa-solid fa-trash"></i> Clear Fake Jobs
+        <button class="btn btn-danger btn-sm" id="clear-fake-btn">
+          <i class="fa-solid fa-trash"></i> Clear Unknown & Flagged
         </button>
       </div>
     </div>
@@ -215,7 +215,7 @@
 <script>
 // ── Clear fake jobs ───────────────────────────────────────────────────────────
 document.getElementById('clear-fake-btn')?.addEventListener('click', async () => {
-  if (!confirm('Delete all fake/demo jobs (non-JSearch)? Real jobs stay.')) return;
+  if (!confirm('Delete jobs with an unknown company or flagged as likely spam? Jobs someone has saved or applied to will be hidden instead of deleted.')) return;
   const btn = document.getElementById('clear-fake-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing…';
@@ -223,13 +223,13 @@ document.getElementById('clear-fake-btn')?.addEventListener('click', async () =>
     const res = await fetch('/admin/clear-fake-jobs', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      showToast(`Deleted ${data.deleted} fake job(s)`, 'success');
+      showToast(`Deleted ${data.deleted}, hid ${data.skipped}`, 'success');
       setTimeout(() => location.reload(), 1000);
     }
   } catch {
     showToast('Failed to clear jobs', 'error');
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-trash"></i> Clear Fake Jobs';
+    btn.innerHTML = '<i class="fa-solid fa-trash"></i> Clear Unknown & Flagged';
   }
 });
 

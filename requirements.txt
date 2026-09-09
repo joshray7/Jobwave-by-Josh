@@ -13,3 +13,5 @@ resend
 apscheduler
 itsdangerous
 python-dateutil
+requests
+requests-html

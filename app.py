@@ -9,7 +9,8 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-import os, json, csv, io, threading, time, re
+from tips import get_dashboard_tips
+import os, json, csv, io, threading, time, re, requests
 from functools import wraps
 
 
@@ -218,6 +219,17 @@ class ScraperLog(db.Model):
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     ended_at = db.Column(db.DateTime)
 
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    category = db.Column(db.String(50))  # bug | feature | general | praise
+    message = db.Column(db.Text, nullable=False)
+    rating = db.Column(db.Integer)  # 1-5, optional
+    page_url = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='new')  # new | reviewed | resolved
+    user = db.relationship('User')
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -284,6 +296,28 @@ def validate_username(username):
     if not re.match(r'^[a-z0-9_]+$', username):
         return 'Username can only contain lowercase letters, numbers, and underscores.'
     return None
+
+def post_to_telegram(text):
+    """Post a message to the JobWave Telegram channel. Returns True/False."""
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    channel_id = os.environ.get('TELEGRAM_CHANNEL_ID', '')
+    if not token or not channel_id:
+        return False
+    try:
+        resp = requests.post(
+            f'https://api.telegram.org/bot{token}/sendMessage',
+            json={
+                'chat_id': channel_id,
+                'text': text,
+                'parse_mode': 'HTML',
+                'disable_web_page_preview': False,
+            },
+            timeout=10,
+        )
+        return resp.ok
+    except Exception as e:
+        app.logger.error(f"Telegram post failed: {e}")
+        return False
 
 
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
@@ -450,11 +484,28 @@ def dashboard():
     status_counts = {}
     for status in ['applied', 'interview', 'offer', 'rejected']:
         status_counts[status] = Application.query.filter_by(user_id=current_user.id, status=status).count()
+
+    from datetime import timedelta
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    new_jobs_today = Job.query.filter(Job.is_active == True, Job.scraped_at >= today_start).count()
+
     recent_jobs = Job.query.filter_by(is_active=True).order_by(Job.scraped_at.desc()).limit(8).all()
+
+    job_tips = []
+    for tip in JOB_SEARCH_TIPS:
+        job_tips.append({
+            'title': tip['title'],
+            'summary': tip['summary'],
+            'icon': tip['icon'],
+            'guide_html': tip['guide_html'],
+            'link': url_for(tip['link_endpoint']) if tip['link_endpoint'] else None,
+            'link_text': tip['link_text'],
+        })
+
     return render_template('dashboard.html', saved_count=saved_count, app_count=app_count,
                            alert_count=alert_count, recent_apps=recent_apps,
-                           status_counts=status_counts, recent_jobs=recent_jobs)
-
+                           status_counts=status_counts, recent_jobs=recent_jobs,
+                           new_jobs_today=new_jobs_today, job_tips=job_tips)
 
 # ─── Jobs ──────────────────────────────────────────────────────────────────────
 
@@ -669,6 +720,42 @@ def build_whatsapp_message(job):
     internal_url = url_for('job_detail', job_id=job.id, _external=True)
     lines.append(f"🔗 APPLY: {internal_url}")
     lines.append(f"📌 Source: {job.source}")
+    lines.append("🤖 JobWave — Find your next job")
+
+    return "\n".join(lines)
+
+def build_telegram_message(job):
+    NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
+    flag = "🇳🇬" if job.source in NIGERIAN_SOURCES else "🌍"
+    internal_url = url_for('job_detail', job_id=job.id, _external=True)
+
+    job_type_map = {
+        'full-time': 'Full-time', 'part-time': 'Part-time',
+        'remote': 'Remote', 'contract': 'Contract', 'internship': 'Internship',
+    }
+    exp_map = {'entry': 'Entry-level', 'mid': 'Mid-level', 'senior': 'Senior-level', 'lead': 'Lead-level'}
+
+    job_type_label = job_type_map.get((job.job_type or '').lower(), (job.job_type or 'Full-time').title())
+
+    lines = [
+        f"🚨 <b>NEW JOB — JOBWAVE</b>",
+        f"💼 <b>{job.title}</b>",
+        f"🏢 {job.company or 'Unknown'}",
+    ]
+    if job.location:
+        lines.append(f"📍 {job.location}")
+    lines.append(f"🕐 {job_type_label}")
+
+    exp_label = exp_map.get((job.experience or '').lower())
+    if exp_label:
+        lines.append(f"📊 {exp_label}")
+
+    summary = one_line_summary(job.description)
+    if summary:
+        lines.append(f"📝 {summary}")
+
+    lines.append(f'\n🔗 <a href="{internal_url}">APPLY</a>')
+    lines.append(f"{flag} Source: {job.source}")
     lines.append("🤖 JobWave — Find your next job")
 
     return "\n".join(lines)
@@ -1241,6 +1328,7 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                 raise ValueError(f"Unknown profile: {profile_name}")
 
             added = 0
+            newly_added_jobs = []
             seen_in_batch = set()
             for jd in jobs_data:
                 source_id = jd.get('source_id')
@@ -1252,9 +1340,20 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                 if jd.get('company'):
                     jd['company'] = jd['company'][:290]
                 if not Job.query.filter_by(source_id=source_id).first():
-                    db.session.add(Job(**jd))
+                    new_job = Job(**jd)
+                    db.session.add(new_job)
+                    newly_added_jobs.append(new_job)
                     added += 1
             db.session.commit()
+
+            # Auto-post clean, non-flagged new jobs to Telegram
+            for job in newly_added_jobs:
+                if not is_suspicious_job(job):
+                    try:
+                        post_to_telegram(build_telegram_message(job))
+                        time.sleep(1.5)  # stay well under Telegram's rate limit
+                    except Exception as e:
+                        app.logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
 
             log = ScraperLog.query.get(log_id)
             if log:
@@ -1358,10 +1457,49 @@ def admin():
 @login_required
 @admin_required
 def clear_fake_jobs():
-    deleted = Job.query.filter(Job.source != 'JSearch').delete()
-    db.session.commit()
-    return jsonify({'success': True, 'deleted': deleted})
+    from sqlalchemy.exc import IntegrityError
 
+    active_jobs_light = db.session.query(
+        Job.id, Job.company, Job.title, Job.description
+    ).filter_by(is_active=True).all()
+
+    target_ids = set()
+    for row in active_jobs_light:
+        if not row.company or row.company.strip().lower() == 'unknown':
+            target_ids.add(row.id)
+        elif is_suspicious_job(row):
+            target_ids.add(row.id)
+
+    target_ids = list(target_ids)
+    deleted_count = 0
+    skipped_count = 0
+    deactivated_ids = []
+    chunk_size = 25
+
+    for i in range(0, len(target_ids), chunk_size):
+        chunk = target_ids[i:i + chunk_size]
+        try:
+            db.session.query(Job).filter(Job.id.in_(chunk)).delete(synchronize_session=False)
+            db.session.commit()
+            deleted_count += len(chunk)
+        except IntegrityError:
+            db.session.rollback()
+            for job_id in chunk:
+                try:
+                    db.session.query(Job).filter_by(id=job_id).delete()
+                    db.session.commit()
+                    deleted_count += 1
+                except IntegrityError:
+                    db.session.rollback()
+                    db.session.query(Job).filter_by(id=job_id).update({'is_active': False})
+                    db.session.commit()
+                    skipped_count += 1
+                    deactivated_ids.append(job_id)
+
+    if deactivated_ids:
+        notify_trackers_of_closed_jobs(deactivated_ids)
+
+    return jsonify({'success': True, 'deleted': deleted_count, 'skipped': skipped_count})
 
 @app.route('/api/scraper/status/<int:log_id>')
 @login_required
@@ -1495,6 +1633,72 @@ SCAM_KEYWORDS = [
     'whatsapp only', 'click here to apply', 'guaranteed income',
     'work and earn', 'quick money', 'easy money', 'get rich quick',
     'investment opportunity', 'pyramid scheme',
+]
+
+JOB_SEARCH_TIPS = [
+    {
+        'title': 'Set alerts for your target role',
+        'summary': 'Get notified when new matching jobs are posted.',
+        'icon': 'fa-bell',
+        'guide_html': '''
+            <p>Job alerts run automatically twice a day, so you never have to manually check for new listings.</p>
+            <ol style="padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <li>Go to <strong>Alerts</strong> in the sidebar.</li>
+                <li>Click <strong>Create Alert</strong> and enter a keyword (e.g. "Frontend Developer") and optionally a location or job type.</li>
+                <li>Choose how often you want to be emailed: daily or weekly.</li>
+                <li>Save it. JobWave will email you whenever a new job matches.</li>
+            </ol>
+        ''',
+        'link_endpoint': 'alerts',
+        'link_text': 'Go to Alerts →',
+    },
+    {
+        'title': 'Track every application',
+        'summary': "Don't lose track. Log every job you apply to.",
+        'icon': 'fa-clipboard-list',
+        'guide_html': '''
+            <p>JobWave gives you two ways to track applications depending on where the job came from.</p>
+            <ol style="padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <li>For jobs posted directly on JobWave, click <strong>Apply Now</strong>. Your application goes straight to the employer.</li>
+                <li>For jobs from other sites, apply on the original site first, then come back and click <strong>Track Application</strong> to log it.</li>
+                <li>Update the status yourself as things progress: Interview, Offer, or Rejected.</li>
+                <li>See your full pipeline anytime on the <strong>Applications</strong> page.</li>
+            </ol>
+        ''',
+        'link_endpoint': 'applications',
+        'link_text': 'Go to Applications →',
+    },
+    {
+        'title': 'Aim for 10+ apps a week',
+        'summary': 'Volume and quality together lead to more interviews.',
+        'icon': 'fa-bolt',
+        'guide_html': '''
+            <p>A steady volume of applications keeps your pipeline full while you wait to hear back from earlier ones.</p>
+            <ol style="padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <li>Use <strong>Browse Jobs</strong> with filters (salary, location, experience level) to find close matches quickly.</li>
+                <li>Save promising roles first, then apply in a batch rather than one at a time.</li>
+                <li>Use <strong>Collections</strong> to group jobs by priority, so you always know what to apply to next.</li>
+            </ol>
+        ''',
+        'link_endpoint': 'jobs',
+        'link_text': 'Browse Jobs →',
+    },
+    {
+        'title': 'Follow up after interviews',
+        'summary': 'A quick thank-you note stands out.',
+        'icon': 'fa-comment-dots',
+        'guide_html': '''
+            <p>A short, genuine follow-up message after an interview keeps you top of mind and shows professionalism.</p>
+            <ol style="padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <li>Send it within 24 hours of the interview.</li>
+                <li>Thank the interviewer for their time, and mention one specific thing you discussed.</li>
+                <li>Keep it short: three to four sentences is enough.</li>
+                <li>Update the job's status to <strong>Interview</strong> on your Applications page so you remember where things stand.</li>
+            </ol>
+        ''',
+        'link_endpoint': None,
+        'link_text': None,
+    },
 ]
 
 
@@ -2004,6 +2208,67 @@ def faq():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
+
+
+# -------- FEEDBACK----------------------------
+@app.route('/feedback', methods=['GET', 'POST'])
+@login_required
+def feedback():
+    if request.method == 'POST':
+        message = request.form.get('message', '').strip()
+        category = request.form.get('category', 'general')
+        rating = request.form.get('rating', type=int)
+        page_url = request.form.get('page_url', '').strip()
+
+        if not message:
+            flash('Please enter your feedback before submitting.', 'error')
+            return render_template('feedback.html')
+
+        fb = Feedback(
+            user_id=current_user.id,
+            category=category,
+            message=message,
+            rating=rating,
+            page_url=page_url or None,
+        )
+        db.session.add(fb)
+        db.session.commit()
+        flash('Thanks for the feedback! We read every one.', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('feedback.html')
+
+
+@app.route('/admin/feedback')
+@login_required
+@admin_required
+def admin_feedback():
+    status_filter = request.args.get('status', '')
+    query = Feedback.query
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    items = query.order_by(Feedback.created_at.desc()).all()
+
+    counts = {
+        'new': Feedback.query.filter_by(status='new').count(),
+        'reviewed': Feedback.query.filter_by(status='reviewed').count(),
+        'resolved': Feedback.query.filter_by(status='resolved').count(),
+    }
+    return render_template('admin_feedback.html', items=items, counts=counts, status_filter=status_filter)
+
+
+@app.route('/admin/feedback/<int:fb_id>/status', methods=['POST'])
+@login_required
+@admin_required
+def update_feedback_status(fb_id):
+    fb = Feedback.query.get_or_404(fb_id)
+    data = request.get_json(force=True, silent=True) or {}
+    new_status = data.get('status')
+    if new_status not in ('new', 'reviewed', 'resolved'):
+        return jsonify({'success': False}), 400
+    fb.status = new_status
+    db.session.commit()
+    return jsonify({'success': True})
 
 # ─── Init ──────────────────────────────────────────────────────────────────────
 

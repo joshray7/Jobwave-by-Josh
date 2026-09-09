@@ -12,7 +12,7 @@
     <div class="stat-card">
       <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>
       <div>
-        <div class="stat-value">{{ recent_jobs|length }} +</div>
+        <div class="stat-value">{{ new_jobs_today }} </div>
         <div class="stat-label">New Jobs Today</div>
       </div>
     </div>
@@ -133,18 +133,23 @@
         </div>
       </div>
 
-      <!-- Quick links -->
-      <div class="card">
-        <div class="section-title" style="margin-bottom:12px;">Quick Actions</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <a href="{{ url_for('jobs') }} " class="btn btn-outline btn-sm" style="justify-content:flex-start;">
-            <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>Browse Jobs</a>
-          <a href="{{ url_for('alerts') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">
-            <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>Manage Alerts 
-          </a>
-          <a href="{{ url_for('export_jobs') }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;">
-            <span class="nav-icon"><i class="fa-solid fa-download"></i></span>Export Saved Jobs
-          </a>
+      <!-- Rotating job search tip -->
+      <div class="card" id="tip-card" style="cursor:pointer;position:relative;overflow:hidden;min-height:150px;">
+        <div class="section-title" style="margin-bottom:12px;">Job Search Tips</div>
+        <div id="tip-slider" style="position:relative;">
+          <!-- JS injects tip content here -->
+        </div>
+        <div style="display:flex;gap:4px;margin-top:14px;" id="tip-dots"></div>
+      </div>
+
+      <!-- Tip guide modal -->
+      <div class="modal-backdrop" id="tip-modal-backdrop">
+        <div class="modal" style="max-width:480px;">
+          <div class="modal-header">
+            <div class="modal-title" id="tip-modal-title"></div>
+            <button class="modal-close" id="tip-modal-close">&times;</button>
+          </div>
+          <div id="tip-modal-body" style="color:var(--text-dim);font-size:0.9rem;line-height:1.7;"></div>
         </div>
       </div>
 
@@ -152,4 +157,72 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobTips = {{ job_tips | tojson }};
+
+let currentTipIndex = 0;
+let tipRotationTimer = null;
+
+function renderTip(index) {
+  const tip = jobTips[index];
+  const slider = document.getElementById('tip-slider');
+  const dots = document.getElementById('tip-dots');
+
+  slider.innerHTML = `
+    <div class="tip-slide" style="display:flex;gap:10px;">
+      <span style="color:var(--mint);flex-shrink:0;font-size:1.1rem;"><i class="fa-solid ${tip.icon}"></i></span>
+      <div>
+        <div style="font-weight:600;margin-bottom:2px;">${tip.title}</div>
+        <div style="color:var(--text-muted);font-size:0.82rem;">${tip.summary}</div>
+      </div>
+    </div>
+  `;
+
+  dots.innerHTML = jobTips.map((_, i) =>
+    `<span style="width:6px;height:6px;border-radius:50%;background:${i === index ? 'var(--mint)' : 'var(--border)'};transition:background 0.3s;"></span>`
+  ).join('');
+
+  const slide = slider.querySelector('.tip-slide');
+  slide.style.animation = 'slideTipIn 0.4s ease';
+}
+
+function rotateTip() {
+  currentTipIndex = (currentTipIndex + 1) % jobTips.length;
+  renderTip(currentTipIndex);
+}
+
+function startTipRotation() {
+  tipRotationTimer = setInterval(rotateTip, 10000);
+}
+
+renderTip(currentTipIndex);
+startTipRotation();
+
+document.getElementById('tip-card').addEventListener('click', () => {
+  const tip = jobTips[currentTipIndex];
+  document.getElementById('tip-modal-title').textContent = tip.title;
+  let bodyHtml = tip.guide_html;
+  if (tip.link) {
+    bodyHtml += `<a href="${tip.link}" class="btn btn-primary btn-sm" style="margin-top:14px;">${tip.link_text}</a>`;
+  }
+  document.getElementById('tip-modal-body').innerHTML = bodyHtml;
+  document.getElementById('tip-modal-backdrop').classList.add('open');
+  clearInterval(tipRotationTimer);
+});
+
+document.getElementById('tip-modal-close').addEventListener('click', () => {
+  document.getElementById('tip-modal-backdrop').classList.remove('open');
+  startTipRotation();
+});
+
+document.getElementById('tip-modal-backdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    document.getElementById('tip-modal-backdrop').classList.remove('open');
+    startTipRotation();
+  }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Feedback{% endblock %}
+{% block page_title %}User Feedback{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="filter-tabs">
+  <a href="{{ url_for('admin_feedback') }}" class="filter-tab {% if not status_filter %}active{% endif %}">All</a>
+  <a href="{{ url_for('admin_feedback', status='new') }}" class="filter-tab {% if status_filter == 'new' %}active{% endif %}">New <span class="filter-count">{{ counts.new }}</span></a>
+  <a href="{{ url_for('admin_feedback', status='reviewed') }}" class="filter-tab {% if status_filter == 'reviewed' %}active{% endif %}">Reviewed <span class="filter-count">{{ counts.reviewed }}</span></a>
+  <a href="{{ url_for('admin_feedback', status='resolved') }}" class="filter-tab {% if status_filter == 'resolved' %}active{% endif %}">Resolved <span class="filter-count">{{ counts.resolved }}</span></a>
+</div>
+
+{% if items %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for fb in items %}
+  <div class="card" id="fb-{{ fb.id }}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+          <span class="badge {% if fb.category == 'bug' %}badge-red{% elif fb.category == 'feature' %}badge-indigo{% elif fb.category == 'praise' %}badge-mint{% else %}badge-gray{% endif %}">{{ fb.category|title }}</span>
+          {% if fb.rating %}
+          <span style="color:var(--mint);font-size:0.8rem;">{{ '★' * fb.rating }}{{ '☆' * (5 - fb.rating) }}</span>
+          {% endif %}
+          <span style="font-size:0.78rem;color:var(--text-muted);">{{ fb.user.name if fb.user else 'Unknown' }} · {{ fb.created_at.strftime('%b %d, %Y') }}</span>
+        </div>
+        <div style="font-size:0.9rem;color:var(--text-dim);white-space:pre-line;">{{ fb.message }}</div>
+        {% if fb.page_url %}
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">From: {{ fb.page_url }}</div>
+        {% endif %}
+      </div>
+      <select class="form-control fb-status-select" data-fb-id="{{ fb.id }}" style="width:auto;">
+        <option value="new" {% if fb.status == 'new' %}selected{% endif %}>New</option>
+        <option value="reviewed" {% if fb.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+        <option value="resolved" {% if fb.status == 'resolved' %}selected{% endif %}>Resolved</option>
+      </select>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-comment-dots" style="font-size:48px;opacity:0.3;"></i></div>
+  <h3>No feedback yet</h3>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.fb-status-select').forEach(sel => {
+  sel.addEventListener('change', async () => {
+    const id = sel.dataset.fbId;
+    try {
+      const res = await fetch(`/admin/feedback/${id}/status`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ status: sel.value })
+      });
+      const data = await res.json();
+      if (data.success) showToast('Status updated', 'success');
+    } catch { showToast('Failed to update', 'error'); }
+  });
+});
+</script>
+{% endblock %}
