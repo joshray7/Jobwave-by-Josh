@@ -737,7 +737,7 @@ def build_whatsapp_message(job):
         for r in reqs:
             lines.append(f"• {r}")
 
-    internal_url = url_for('job_detail', job_id=job.id, _external=True)
+    internal_url = f"{os.environ.get('APP_URL', 'https://jobwave-by-josh.onrender.com')}/jobs/{job.id}"
     lines.append(f"🔗 APPLY: {internal_url}")
     lines.append(f"📌 Source: {job.source}")
     lines.append("🤖 JobWave — Find your next job")
@@ -747,7 +747,7 @@ def build_whatsapp_message(job):
 def build_telegram_message(job):
     NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
     flag = "🇳🇬" if job.source in NIGERIAN_SOURCES else "🌍"
-    internal_url = url_for('job_detail', job_id=job.id, _external=True)
+    internal_url = f"{os.environ.get('APP_URL', 'https://jobwave-by-josh.onrender.com')}/jobs/{job.id}"
 
     job_type_map = {
         'full-time': 'Full-time', 'part-time': 'Part-time',
