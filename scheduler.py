@@ -8,6 +8,7 @@ Runs background jobs:
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler(timezone='Africa/Lagos')
@@ -29,12 +30,14 @@ def run_daily_scraper(app):
         logger.info("Scheduler: starting daily scrape...")
 
         def run_profile(profile_name, fetch_fn, kwargs):
+            from app import process_scraped_job, post_to_telegram, build_telegram_message
             log = ScraperLog(source=profile_name, status='running')
             db.session.add(log)
             db.session.commit()
             try:
                 jobs_data = fetch_fn(**kwargs)
                 added = 0
+                newly_added_jobs = []
                 seen_in_batch = set()
                 for jd in jobs_data:
                     source_id = jd.get('source_id')
@@ -45,10 +48,27 @@ def run_daily_scraper(app):
                         jd['title'] = jd['title'][:490]
                     if jd.get('company'):
                         jd['company'] = jd['company'][:290]
+
+                    jd = process_scraped_job(jd)
+
                     if not Job.query.filter_by(source_id=source_id).first():
-                        db.session.add(Job(**jd))
+                        new_job = Job(**jd)
+                        db.session.add(new_job)
+                        newly_added_jobs.append(new_job)
                         added += 1
                 db.session.commit()
+
+                # Auto-post only jobs that were auto-approved (clean, unflagged)
+                for job in newly_added_jobs:
+                    if job.approval_status == 'approved':
+                        try:
+                            post_to_telegram(build_telegram_message(job))
+                            job.posted_to_telegram = True
+                            db.session.commit()
+                            time.sleep(1.5)
+                        except Exception as e:
+                            logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
+
                 log.status = 'success'
                 log.jobs_found = len(jobs_data)
                 log.jobs_added = added

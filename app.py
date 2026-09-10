@@ -128,6 +128,8 @@ class Job(db.Model):
     posted_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approval_status = db.Column(db.String(20), default='approved')  # pending | approved | rejected
     rejection_reason = db.Column(db.String(500))
+    posted_to_telegram = db.Column(db.Boolean, default=False)
+    validation_warnings = db.Column(db.String(500))  # comma-separated
 
     @property
     def work_arrangement(self):
@@ -672,17 +674,35 @@ def one_line_summary(description, max_len=160):
 
 
 def extract_requirements(description):
-    """Try to pull a short requirements/qualifications bullet list from the description."""
+    """Try to pull a short, genuine requirements/qualifications list from the description."""
     if not description:
         return []
-    match = re.search(r'(requirements?|qualifications?|skills?)\s*:?\s*(.*)', description, re.IGNORECASE | re.DOTALL)
+
+    match = re.search(
+        r'(?:requirements?|qualifications?)\s*:\s*(.*)',
+        description, re.IGNORECASE | re.DOTALL
+    )
     if not match:
         return []
-    tail = match.group(2)
-    parts = re.split(r'[•\u2022\-\n;]+', tail)
-    parts = [p.strip(' .') for p in parts if p.strip() and len(p.strip()) > 3]
-    return [p for p in parts if len(p) < 80][:4]
 
+    tail = match.group(1)
+    parts = re.split(r'[•\u2022\-\n;]+', tail)
+    parts = [p.strip(' .') for p in parts if p.strip()]
+
+    junk_patterns = [
+        'job title', 'location:', 'we are recruiting', 'never miss', 'linkedin page',
+        'apply now', 'click here', 'send your cv', 'salary:', 'deadline',
+    ]
+    cleaned = []
+    for p in parts:
+        low = p.lower()
+        if any(j in low for j in junk_patterns):
+            continue
+        if len(p) < 4 or len(p) > 80:
+            continue
+        cleaned.append(p)
+
+    return cleaned[:4]
 
 def build_whatsapp_message(job):
     """Build the standard WhatsApp job announcement format for any job, from any source."""
@@ -759,6 +779,53 @@ def build_telegram_message(job):
     lines.append("🤖 JobWave — Find your next job")
 
     return "\n".join(lines)
+
+from job_quality import (
+    normalize_company, normalize_location, normalize_experience,
+    clean_description, validate_scraped_job,
+)
+
+
+def process_scraped_job(jd):
+    """
+    Normalizes a raw scraped job dict in place and decides its approval
+    status. Returns the same dict, mutated, ready to construct a Job(**jd).
+    """
+    jd['company'] = normalize_company(jd.get('company'))
+    jd['location'] = normalize_location(jd.get('location'))
+    jd['description'] = clean_description(jd.get('description'))
+
+    exp, contradicted = normalize_experience(
+        jd.get('experience'), jd.get('title'), jd.get('description')
+    )
+    jd['experience'] = exp
+    jd['_experience_contradicted'] = contradicted  # used by validator only
+
+    quality_warnings = validate_scraped_job(jd)
+    jd.pop('_experience_contradicted', None)
+
+    # Reuse the existing scam/spam filter too — it works on attribute access,
+    # so wrap the dict in a tiny shim.
+    class _JobLike:
+        pass
+    shim = _JobLike()
+    shim.title = jd.get('title', '')
+    shim.company = jd.get('company', '')
+    shim.description = jd.get('description', '')
+    spam_flagged = is_suspicious_job(shim)
+
+    all_warnings = quality_warnings + (['flagged_as_spam'] if spam_flagged else [])
+
+    if all_warnings:
+        jd['approval_status'] = 'pending'
+        jd['is_active'] = False
+        jd['validation_warnings'] = ','.join(all_warnings)
+    else:
+        jd['approval_status'] = 'approved'
+        jd['is_active'] = True
+        jd['validation_warnings'] = None
+
+    return jd
 
 def notify_trackers_of_closed_jobs(job_ids):
     """Email any user tracking these jobs that they're no longer active."""
@@ -1339,6 +1406,9 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                     jd['title'] = jd['title'][:490]
                 if jd.get('company'):
                     jd['company'] = jd['company'][:290]
+
+                jd = process_scraped_job(jd)
+
                 if not Job.query.filter_by(source_id=source_id).first():
                     new_job = Job(**jd)
                     db.session.add(new_job)
@@ -1346,12 +1416,14 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
                     added += 1
             db.session.commit()
 
-            # Auto-post clean, non-flagged new jobs to Telegram
+            # Auto-post only jobs that were auto-approved (clean, unflagged)
             for job in newly_added_jobs:
-                if not is_suspicious_job(job):
+                if job.approval_status == 'approved':
                     try:
                         post_to_telegram(build_telegram_message(job))
-                        time.sleep(1.5)  # stay well under Telegram's rate limit
+                        job.posted_to_telegram = True
+                        db.session.commit()
+                        time.sleep(1.5)
                     except Exception as e:
                         app.logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
 
@@ -1861,7 +1933,17 @@ def approve_employer_job(job_id):
     job = Job.query.get_or_404(job_id)
     job.approval_status = 'approved'
     job.is_active = True
+    job.validation_warnings = None
     db.session.commit()
+
+    if not job.posted_to_telegram:
+        try:
+            post_to_telegram(build_telegram_message(job))
+            job.posted_to_telegram = True
+            db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Telegram post failed after approval: {e}")
+
     return jsonify({'success': True})
 
 
@@ -1876,6 +1958,35 @@ def reject_employer_job(job_id):
     job.rejection_reason = data.get('reason', '')[:500]
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/admin/employer-jobs/<int:job_id>/edit-approve', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_approve_job(job_id):
+    job = Job.query.get_or_404(job_id)
+    if request.method == 'POST':
+        job.title = request.form.get('title', job.title).strip()
+        job.company = request.form.get('company', job.company).strip()
+        job.location = request.form.get('location', job.location).strip()
+        job.experience = request.form.get('experience', job.experience)
+        job.description = request.form.get('description', job.description).strip()
+        job.approval_status = 'approved'
+        job.is_active = True
+        job.validation_warnings = None
+        db.session.commit()
+
+        if not job.posted_to_telegram:
+            try:
+                post_to_telegram(build_telegram_message(job))
+                job.posted_to_telegram = True
+                db.session.commit()
+            except Exception as e:
+                app.logger.error(f"Telegram post failed after edit-approve: {e}")
+
+        flash('Job updated and approved.', 'success')
+        return redirect(url_for('employer_job_queue'))
+
+    return render_template('edit_approve_job.html', job=job)
 
 @app.route('/admin/logs')
 @login_required
@@ -2278,9 +2389,10 @@ logging.basicConfig(level=logging.INFO)
 with app.app_context():
     db.create_all()
 
-from scheduler import init_scheduler
-init_scheduler(app)
-print("✅ init_scheduler(app) was called", flush=True)
+if not os.environ.get('SKIP_SCHEDULER'):
+    from scheduler import init_scheduler
+    init_scheduler(app)
+    print("✅ init_scheduler(app) was called", flush=True)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5003)

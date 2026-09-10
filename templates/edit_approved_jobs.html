@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Edit & Approve{% endblock %}
+{% block page_title %}Edit & Approve Job{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:640px;margin:0 auto;">
+  {% if job.validation_warnings %}
+  <div style="margin-bottom:16px;padding:10px 14px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.2);border-radius:8px;font-size:0.82rem;color:#ffb400;">
+    Flagged: {{ job.validation_warnings.replace(',', ', ').replace('_', ' ') }}
+  </div>
+  {% endif %}
+
+  <form method="POST" class="auth-form">
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input class="form-control" name="title" value="{{ job.title }}" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Company</label>
+      <input class="form-control" name="company" value="{{ job.company }}" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Location</label>
+      <input class="form-control" name="location" value="{{ job.location or '' }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Experience Level</label>
+      <select class="form-control" name="experience">
+        {% for e in ['entry','mid','senior','lead','unknown'] %}
+        <option value="{{ e }}" {% if job.experience == e %}selected{% endif %}>{{ e|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-control" name="description" rows="8" required>{{ job.description }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-mint auth-submit">Save & Approve</button>
+  </form>
+</div>
+{% endblock %}
