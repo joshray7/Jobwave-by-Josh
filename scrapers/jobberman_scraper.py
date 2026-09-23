@@ -220,9 +220,13 @@ def fetch_jobberman_jobs(category_path: str = None, num_pages: int = 1):
 JOBBERMAN_PROFILES = [
     {'name': 'Jobberman — Sales', 'category_path': 'sales', 'num_pages': 1},
     {'name': 'Jobberman — Admin & Office', 'category_path': 'admin-office', 'num_pages': 1},
-    {'name': 'Jobberman — Engineering & Tech', 'category_path': 'engineering-technology', 'num_pages': 1},
+    {'name': 'Jobberman — Engineering', 'category_path': 'engineering', 'num_pages': 1},
     {'name': 'Jobberman — Customer Service', 'category_path': 'customer-service-support', 'num_pages': 1},
     {'name': 'Jobberman — Marketing & Comms', 'category_path': 'marketing-communications', 'num_pages': 1},
+    {'name': 'Jobberman — Healthcare & Medical', 'category_path': 'medical-pharmaceutical', 'num_pages': 1},
+    {'name': 'Jobberman — Teaching & Education', 'category_path': 'research-teaching-training', 'num_pages': 1},
+    {'name': 'Jobberman — Finance & Accounting', 'category_path': 'accounting-auditing-finance', 'num_pages': 1},
+    {'name': 'Jobberman — ICT & Software', 'category_path': 'software-data', 'num_pages': 1},
 ]
 
 

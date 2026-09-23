@@ -47,7 +47,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Latest Listings</div>
-          <div class="section-sub">Freshest jobs from all sources</div>
+          <div class="section-sub">{{ 'Matched to your profile' if listings_personalized else 'Freshest jobs from all sources' }}</div>
         </div>
         <a href="{{ url_for('jobs') }}" class="btn btn-outline btn-sm">View All →</a>
       </div>
@@ -69,7 +69,7 @@
         </div>
         {% else %}
         <div class="empty-state" style="padding:40px 20px;">
-          <div class="empty-icon">📭</div>
+          <div class="empty-icon"><i class="fa-regular fa-envelope-open"></i></div>
           <h3>No jobs yet</h3>
           <p>There are no listings yet for now.</p>
           {% if current_user.role == 'admin' %}

@@ -279,6 +279,55 @@ SEARCH_PROFILES = [
         'location': 'GLOBAL',
         'num_pages': 1,
         'date_posted': 'month',
+    },
+    {
+        'name': 'Marketing & Sales',
+        'query': 'marketing sales business development growth',
+        'location': 'GLOBAL',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Finance & Accounting',
+        'query': 'finance accounting bookkeeping financial analyst',
+        'location': 'GLOBAL',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'marketing & sales',
+        'query': 'marketing sales business development growth',
+        'location': 'NIGERIA',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Teaching & Education',
+        'query': 'teacher tutor instructor education',
+        'location': 'GLOBAL',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Construction & Real Estate',
+        'query': 'construction engineer architect real estate property manager',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Logistics & Supply Chain',
+        'query': 'logistics supply chain operations warehouse manager',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
+    },
+    {
+        'name': 'Hospitality & Tourism',
+        'query': 'hospitality tourism hotel restaurant travel agent',
+        'location': '',
+        'num_pages': 1,
+        'date_posted': 'month',
     }
 
 ]

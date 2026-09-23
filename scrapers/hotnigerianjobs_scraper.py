@@ -232,6 +232,13 @@ HOTNIGERIANJOBS_PROFILES = [
     {'name': 'HotNigerianJobs — Finance', 'field_id': '229', 'num_pages': 1},
     {'name': 'HotNigerianJobs — Engineering', 'field_id': '274', 'num_pages': 1},
     {'name': 'HotNigerianJobs — NGO Sector', 'industry_id': '127', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — ICT & Software', 'field_id': '271', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Healthcare & Medical', 'field_id': '278', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Teaching & Education', 'field_id': '279', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Oil & Gas', 'industry_id': '128', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Construction & Real Estate', 'industry_id': '129', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Logistics & Supply Chain', 'field_id': '275', 'num_pages': 1},
+    {'name': 'HotNigerianJobs — Hospitality & Tourism', 'industry_id': '130', 'num_pages': 1},
 ]
 
 

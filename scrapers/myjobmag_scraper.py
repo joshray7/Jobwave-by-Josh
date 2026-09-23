@@ -217,6 +217,10 @@ MYJOBMAG_PROFILES = [
     {'name': 'MyJobMag — Health & Medical', 'category': 'health-medical', 'num_pages': 1},
     {'name': 'MyJobMag — NGO & Development', 'category': 'ngo-development', 'num_pages': 1},
     {'name': 'MyJobMag — Teaching & Education', 'category': 'teaching-education', 'num_pages': 1},
+    {'name': 'MyJobMag — Oil & Gas', 'category': 'oil-gas', 'num_pages': 1},
+    {'name': 'MyJobMag — Construction & Real Estate', 'category': 'construction-real-estate', 'num_pages': 1},
+    {'name': 'MyJobMag — Logistics & Supply Chain', 'category': 'logistics-supply-chain', 'num_pages': 1},
+    {'name': 'MyJobMag — Hospitality & Tourism', 'category': 'hospitality-tourism', 'num_pages': 1},
 ]
 
 

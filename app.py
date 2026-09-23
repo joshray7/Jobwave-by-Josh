@@ -491,7 +491,36 @@ def dashboard():
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     new_jobs_today = Job.query.filter(Job.is_active == True, Job.scraped_at >= today_start).count()
 
-    recent_jobs = Job.query.filter_by(is_active=True).order_by(Job.scraped_at.desc()).limit(8).all()
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+    keywords = []
+    if profile:
+        keywords.extend(extract_profile_keywords(profile.headline))
+        keywords.extend(extract_profile_keywords(profile.target_role))
+        keywords.extend(profile.skills_list())
+    keywords = list(dict.fromkeys(k for k in keywords if k))  # dedupe, keep order
+
+    recent_jobs = []
+    listings_personalized = False
+
+    if keywords:
+        conditions = []
+        for kw in keywords:
+            pattern = f'%{kw}%'
+            conditions.append(Job.title.ilike(pattern))
+            conditions.append(Job.tags.ilike(pattern))
+        matched = Job.query.filter(Job.is_active == True, db.or_(*conditions))\
+            .order_by(Job.scraped_at.desc()).limit(8).all()
+        if matched:
+            recent_jobs = matched
+            listings_personalized = True
+
+    if len(recent_jobs) < 8:
+        existing_ids = [j.id for j in recent_jobs]
+        fill_query = Job.query.filter(Job.is_active == True)
+        if existing_ids:
+            fill_query = fill_query.filter(~Job.id.in_(existing_ids))
+        fill_jobs = fill_query.order_by(Job.scraped_at.desc()).limit(8 - len(recent_jobs)).all()
+        recent_jobs.extend(fill_jobs)
 
     job_tips = []
     for tip in JOB_SEARCH_TIPS:
@@ -507,7 +536,7 @@ def dashboard():
     return render_template('dashboard.html', saved_count=saved_count, app_count=app_count,
                            alert_count=alert_count, recent_apps=recent_apps,
                            status_counts=status_counts, recent_jobs=recent_jobs,
-                           new_jobs_today=new_jobs_today, job_tips=job_tips)
+                           new_jobs_today=new_jobs_today, job_tips=job_tips, listings_personalized=listings_personalized)
 
 # ─── Jobs ──────────────────────────────────────────────────────────────────────
 
@@ -671,6 +700,14 @@ def one_line_summary(description, max_len=160):
     if len(text) <= max_len:
         return text
     return text[:max_len].rsplit(' ', 1)[0] + '…'
+
+def extract_profile_keywords(text):
+    """Split free-text (headline, target role) into meaningful search words."""
+    if not text:
+        return []
+    stopwords = {'and', 'or', 'the', 'a', 'an', 'of', 'in', 'at', 'for', 'with', 'to', 'my', 'is', 'i', 'am'}
+    words = re.findall(r'[a-zA-Z0-9+#]{3,}', text)
+    return [w for w in words if w.lower() not in stopwords]
 
 
 def extract_requirements(description):
