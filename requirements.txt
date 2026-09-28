@@ -18,3 +18,5 @@ requests-html
 pytest
 Pillow
 psycopg
+jinja2
+pydantic
