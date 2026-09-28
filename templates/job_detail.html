@@ -44,7 +44,9 @@
   <div class="job-detail-main">
     <div class="job-detail-header">
       <div class="job-detail-top">
-        <div class="company-logo job-detail-logo">{{ job.company[0] }}</div>
+        <div class="company-logo job-detail-logo" style="position:relative;overflow:hidden;">
+          {{ company_logo_html(job) }}
+        </div>
         <div style="flex:1;min-width:0;">
           <h2 style="margin-bottom:4px;">{{ job.title }}</h2>
           <div style="font-size:0.95rem;color:var(--text-dim);margin-bottom:12px;">{{ job.company }}</div>

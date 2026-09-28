@@ -30,7 +30,7 @@ def run_daily_scraper(app):
         logger.info("Scheduler: starting daily scrape...")
 
         def run_profile(profile_name, fetch_fn, kwargs):
-            from app import process_scraped_job, post_to_telegram, build_telegram_message
+            from app import process_scraped_job, post_to_telegram, build_telegram_message, guess_company_domain, company_logo_url
             log = ScraperLog(source=profile_name, status='running')
             db.session.add(log)
             db.session.commit()
@@ -62,7 +62,7 @@ def run_daily_scraper(app):
                 for job in newly_added_jobs:
                     if job.approval_status == 'approved':
                         try:
-                            post_to_telegram(build_telegram_message(job))
+                            post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company))
                             job.posted_to_telegram = True
                             db.session.commit()
                             time.sleep(1.5)

@@ -34,7 +34,10 @@ CATEGORY_LIST = [
     'Quality Control & Assurance', 'Human Resources', 'Management & Business Development',
     'Community & Social Services', 'Supply Chain & Procurement', 'Sales',
     'Research, Teaching & Training', 'Trades & Services', 'Driver & Transport Services',
-    'Health & Safety',
+    'Health & Safety', 'Insurance & Risk Management', 'Telecoms & Networking', 'Media, Arts & Entertainment',
+    'Science & Laboratory', 'Security Services', 'Retail & Consumer Goods',
+    'Banking & Investment', 'Manufacturing & Production', 'Real Estate & Property Development',
+    'Non-Profit & NGO', 
 ]
 
 
@@ -70,7 +73,8 @@ def extract_tags(text: str) -> str:
         'customer service', 'hr', 'human resources', 'admin', 'teaching',
         'healthcare', 'medical', 'legal', 'procurement', 'ict', 'software',
         'construction', 'oil and gas', 'ngo', 'hospitality', 'retail', 'security',
-        'driving', 'agriculture', 'banking', 'insurance', 'manufacturing',
+        'driving', 'agriculture', 'banking', 'insurance', 'manufacturing', 'telecom', 
+        'media', 'entertainment', 'research', 'consulting', 'real estate',
     ]
     text = text.lower()
     found = [k for k in keywords if k in text]
@@ -96,6 +100,24 @@ def parse_posted_date(text: str):
     return now
 
 
+def find_card_container(title_tag, max_levels=8, max_strings=40):
+    """Climb from the title link to the largest ancestor that still holds
+    exactly one distinct job link. That ancestor is the full job card."""
+    best = None
+    node = title_tag.parent
+    levels = 0
+    while node is not None and node.name not in ('body', 'html', '[document]') and levels < max_levels:
+        hrefs = {a.get('href') for a in node.find_all('a', href=JOB_LINK_RE)}
+        if len(hrefs) > 1:
+            break  # went too far, now containing multiple jobs
+        if sum(1 for _ in node.stripped_strings) > max_strings:
+            break  # safety cap, e.g. a page with only one job
+        best = node
+        node = node.parent
+        levels += 1
+    return best
+
+
 def parse_job_card(title_tag):
     """Given a job title <a> tag, extract the surrounding job card details."""
     try:
@@ -104,43 +126,46 @@ def parse_job_card(title_tag):
         if not href or not title:
             return None
 
-        container = title_tag.find_parent(['div', 'li', 'article']) or title_tag.parent
+        container = find_card_container(title_tag)
         if not container:
             return None
 
+        junk = {'FEATURED', 'Popular', 'Easy apply', title}
         strings = [s.strip() for s in container.stripped_strings if s.strip()]
-        # Drop the "FEATURED" badge and the title itself from the list
-        strings = [s for s in strings if s not in ('FEATURED', title)]
+        strings = [s for s in strings if s not in junk and len(s) > 1]
+
+        # Card order: company, "location worktype salary", category, time ago, description
+        company = strings[0] if strings else 'Unknown'
+
+        loc_line, work_type_match = '', ''
+        for s in strings:
+            wt = next((w for w in WORK_TYPES if w in s), '')
+            if wt:
+                loc_line, work_type_match = s, wt
+                break
+
+        category_match = next((s for s in strings if s in CATEGORY_LIST), '')
 
         full_text = ' '.join(strings)
-
-        # Company — usually the first remaining string
-        company = strings[0] if strings else 'Unknown'
-        if company.lower() in ('easy apply',):
-            company = 'Unknown'
-
-        # Work type
-        work_type_match = next((wt for wt in WORK_TYPES if wt in full_text), '')
-
-        # Category
-        category_match = next((c for c in CATEGORY_LIST if c in full_text), '')
-
-        # Posted date
-        date_match = re.search(r'\b(Today|Yesterday|\d+\s+days?\s+ago|\d+\s+weeks?\s+ago|\d+\s+months?\s+ago)\b', full_text)
+        date_match = re.search(
+            r'\b(Today|Yesterday|\d+\s+days?\s+ago|\d+\s+weeks?\s+ago|\d+\s+months?\s+ago)\b',
+            full_text,
+        )
         posted_at = parse_posted_date(date_match.group(1)) if date_match else datetime.utcnow()
 
-        # Location — text before the work type keyword
         location = 'Nigeria'
-        if work_type_match:
-            loc_match = re.search(r'([\w\s()&]+?)\s+' + re.escape(work_type_match), full_text)
-            if loc_match:
-                location = loc_match.group(1).strip()
-        if 'remote' in full_text.lower():
+        if loc_line and work_type_match:
+            location = loc_line.split(work_type_match)[0].strip() or 'Nigeria'
+        if 'remote' in loc_line.lower():
             location = 'Remote'
 
-        # Description — the longest string block (usually the job summary)
-        description = max(strings, key=len) if strings else ''
-        if description in (company, work_type_match, category_match) or len(description) < 30:
+        candidates = [
+            s for s in strings
+            if s not in (company, loc_line, category_match)
+            and not re.fullmatch(r'(Today|Yesterday|\d+\s+\w+\s+ago)', s)
+        ]
+        description = max(candidates, key=len) if candidates else ''
+        if len(description) < 30:
             description = ''
 
         full_url = href if href.startswith('http') else f"{JOBBERMAN_BASE}{href}"
@@ -152,7 +177,7 @@ def parse_job_card(title_tag):
             'location': location,
             'job_type': infer_job_type(work_type_match),
             'experience': infer_experience(combined_text),
-            'salary_min': None,   # Naira figures kept out of USD-scale salary fields
+            'salary_min': None,
             'salary_max': None,
             'description': description[:3000] if description else None,
             'requirements': None,

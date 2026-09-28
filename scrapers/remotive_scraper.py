@@ -40,7 +40,11 @@ def extract_tags(title: str, desc: str) -> str:
         'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'terraform', 'postgresql',
         'mysql', 'mongodb', 'redis', 'graphql', 'rest', 'api', 'sql',
         'machine learning', 'ai', 'data science', 'devops', 'ci/cd',
-        'figma', 'ux', 'product', 'agile', 'scrum',
+        'figma', 'ux', 'product', 'agile', 'scrum', 'sales', 'marketing', 'accounting', 'finance', 'engineering',
+        'logistics', 'customer service', 'hr', 'human resources', 'admin',
+        'teaching', 'healthcare', 'medical', 'legal', 'procurement', 'ict', 'software',
+        'construction', 'oil and gas', 'ngo', 'hospitality', 'retail', 'security', 'driving', 'agriculture', 'banking', 'insurance',
+        'manufacturing', 'telecom', 'media', 'entertainment', 'research', 'consulting', 'real estate',
     ]
     text = (title + ' ' + (desc or '')[:1000]).lower()
     found = [k for k in keywords if k in text]

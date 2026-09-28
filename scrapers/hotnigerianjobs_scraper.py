@@ -37,6 +37,8 @@ def infer_job_type(text: str) -> str:
         return 'part-time'
     if 'contract' in text:
         return 'contract'
+    if 'freelance' in text:
+        return 'freelance'
     if 'intern' in text or 'nysc' in text or 'siwes' in text:
         return 'internship'
     return 'full-time'
@@ -57,7 +59,9 @@ def extract_tags(text: str) -> str:
         'customer service', 'hr', 'human resources', 'admin', 'teaching',
         'healthcare', 'medical', 'legal', 'procurement', 'ict', 'software',
         'construction', 'oil and gas', 'ngo', 'hospitality', 'retail', 'security',
-        'driving', 'agriculture', 'banking', 'insurance', 'manufacturing',
+        'driving', 'agriculture', 'banking', 'insurance', 'manufacturing', 'telecom', 
+        'media', 'entertainment', 'research', 'consulting', 'real estate',
+        
     ]
     text = text.lower()
     found = [k for k in keywords if k in text]

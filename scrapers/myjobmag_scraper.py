@@ -56,6 +56,9 @@ def extract_tags(text: str) -> str:
         'healthcare', 'medical', 'legal', 'procurement', 'ict', 'software',
         'construction', 'oil and gas', 'ngo', 'hospitality', 'retail', 'security',
         'driving', 'agriculture', 'banking', 'insurance', 'manufacturing',
+        'telecom', 'media', 'entertainment', 'research', 'consulting', 'real estate',
+        'education', 'nursing', 'pharmacy', 'law', 'supply chain',
+        'tourism', 'research', 'consulting', 'real estate',
     ]
     text = text.lower()
     found = [k for k in keywords if k in text]

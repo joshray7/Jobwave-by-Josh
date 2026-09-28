@@ -12,12 +12,16 @@ from datetime import datetime, timedelta
 from tips import get_dashboard_tips
 import os, json, csv, io, threading, time, re, requests
 from functools import wraps
-
+import base64
+from io import BytesIO
+from PIL import Image
+from markupsafe import Markup, escape
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'jobwave-secret-2024')
+
 
 # ─── Database config ────────────────────────────────────────────────────────────
 # Render provides DATABASE_URL starting with "postgres://" but SQLAlchemy
@@ -67,6 +71,7 @@ class User(db.Model):
     profile = db.relationship('UserProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     username = db.Column(db.String(50), unique=True, nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
+    profile_picture_data = db.Column(db.Text)  # data URI, e.g. "data:image/jpeg;base64,..."
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -130,6 +135,7 @@ class Job(db.Model):
     rejection_reason = db.Column(db.String(500))
     posted_to_telegram = db.Column(db.Boolean, default=False)
     validation_warnings = db.Column(db.String(500))  # comma-separated
+    company_logo_data = db.Column(db.Text)  # employer-uploaded logo, data URI
 
     @property
     def work_arrangement(self):
@@ -299,27 +305,101 @@ def validate_username(username):
         return 'Username can only contain lowercase letters, numbers, and underscores.'
     return None
 
-def post_to_telegram(text):
-    """Post a message to the JobWave Telegram channel. Returns True/False."""
+def post_to_telegram(text, photo_url=None):
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     channel_id = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     if not token or not channel_id:
         return False
     try:
+        if photo_url:
+            caption = text if len(text) <= 1024 else text[:1000].rsplit('\n', 1)[0] + '\n…'
+            resp = requests.post(
+                f'https://api.telegram.org/bot{token}/sendPhoto',
+                json={'chat_id': channel_id, 'photo': photo_url, 'caption': caption, 'parse_mode': 'HTML'},
+                timeout=10,
+            )
+            if resp.ok:
+                return True
         resp = requests.post(
             f'https://api.telegram.org/bot{token}/sendMessage',
-            json={
-                'chat_id': channel_id,
-                'text': text,
-                'parse_mode': 'HTML',
-                'disable_web_page_preview': False,
-            },
+            json={'chat_id': channel_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': False},
             timeout=10,
         )
         return resp.ok
     except Exception as e:
         app.logger.error(f"Telegram post failed: {e}")
         return False
+
+def guess_company_domain(company):
+    if not company or company.strip().lower() == 'unknown':
+        return None
+    name = company.lower()
+    for suffix in [' limited', ' ltd', ' llc', ' inc', ' incorporated', ' corp',
+                   ' corporation', ' plc', ' gmbh', ' co.', ' company', ' group', ' llp']:
+        if name.endswith(suffix):
+            name = name[:-len(suffix)]
+    name = re.sub(r'[^a-z0-9]', '', name)
+    if not name or len(name) < 2:
+        return None
+    return f"{name}.com"
+
+
+def company_logo_url(company):
+    domain = guess_company_domain(company)
+    if not domain:
+        return None
+    return f"https://logo.clearbit.com/{domain}?size=128"
+
+
+app.jinja_env.globals['company_logo_url'] = company_logo_url
+
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5MB
+def process_uploaded_image(file_storage, max_dim=300):
+    """Center-crop to square, resize, compress. Returns (data_uri, error_or_none)."""
+    try:
+        file_storage.seek(0, 2)
+        size = file_storage.tell()
+        file_storage.seek(0)
+        if size > MAX_UPLOAD_BYTES:
+            return None, 'Image is too large (max 5MB).'
+
+        img = Image.open(file_storage).convert('RGB')
+        w, h = img.size
+        side = min(w, h)
+        left, top = (w - side) // 2, (h - side) // 2
+        img = img.crop((left, top, left + side, top + side)).resize((max_dim, max_dim), Image.LANCZOS)
+
+        buffer = BytesIO()
+        img.save(buffer, format='JPEG', quality=82, optimize=True)
+        encoded = base64.b64encode(buffer.getvalue()).decode('ascii')
+        return f'data:image/jpeg;base64,{encoded}', None
+    except Exception as e:
+        app.logger.error(f"Image processing failed: {e}")
+        return None, 'Could not process that image. Try a different file.'
+
+
+def company_logo_html(job):
+    """Employer-uploaded logo > guessed logo from domain > letter fallback."""
+    letter = escape(job.company[0] if job.company else '?')
+    if getattr(job, 'company_logo_data', None):
+        return Markup(
+            f'<span>{letter}</span>'
+            f'<img src="{escape(job.company_logo_data)}" alt="" '
+            f'style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;'
+            f'background:#fff;padding:4px;box-sizing:border-box;">'
+        )
+    logo_url = company_logo_url(job.company)
+    if logo_url:
+        return Markup(
+            f'<span>{letter}</span>'
+            f'<img src="{escape(logo_url)}" alt="" '
+            f'style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;'
+            f'background:#fff;padding:4px;box-sizing:border-box;" onerror="this.remove();">'
+        )
+    return Markup(f'<span>{letter}</span>')
+
+
+app.jinja_env.globals['company_logo_html'] = company_logo_html
 
 
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
@@ -1081,6 +1161,24 @@ def profile():
 
     return render_template('profile.html', prof=prof)
 
+@app.route('/profile/upload-picture', methods=['POST'])
+@login_required
+def upload_profile_picture():
+    file = request.files.get('picture')
+    if not file or file.filename == '':
+        flash('Please choose an image to upload.', 'error')
+        return redirect(url_for('profile'))
+
+    data_uri, error = process_uploaded_image(file, max_dim=300)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('profile'))
+
+    current_user.profile_picture_data = data_uri
+    db.session.commit()
+    flash('Profile picture updated!', 'success')
+    return redirect(url_for('profile'))
+
 
 # ─── Company Pages ──────────────────────────────────────────────────────────────
 
@@ -1457,7 +1555,7 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
             for job in newly_added_jobs:
                 if job.approval_status == 'approved':
                     try:
-                        post_to_telegram(build_telegram_message(job))
+                        post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company))
                         job.posted_to_telegram = True
                         db.session.commit()
                         time.sleep(1.5)
@@ -1975,7 +2073,7 @@ def approve_employer_job(job_id):
 
     if not job.posted_to_telegram:
         try:
-            post_to_telegram(build_telegram_message(job))
+            post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company))
             job.posted_to_telegram = True
             db.session.commit()
         except Exception as e:
@@ -2014,7 +2112,7 @@ def edit_approve_job(job_id):
 
         if not job.posted_to_telegram:
             try:
-                post_to_telegram(build_telegram_message(job))
+                post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company))
                 job.posted_to_telegram = True
                 db.session.commit()
             except Exception as e:
@@ -2123,6 +2221,13 @@ def post_job():
             posted_by_user_id=current_user.id,
             scraped_at=datetime.utcnow(), posted_at=datetime.utcnow(),
         )
+        logo_file = request.files.get('company_logo')
+        if logo_file and logo_file.filename:
+            data_uri, error = process_uploaded_image(logo_file, max_dim=200)
+            if data_uri:
+                job.company_logo_data = data_uri
+            elif error:
+                flash(error, 'error')
         db.session.add(job)
         db.session.commit()
 

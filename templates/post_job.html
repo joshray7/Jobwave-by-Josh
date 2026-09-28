@@ -10,7 +10,7 @@
   </div>
   {% endif %}
 
-  <form method="POST" class="auth-form">
+  <form method="POST" class="auth-form" enctype="multipart/form-data">
     <div class="form-group">
       <label class="form-label">Job Title *</label>
       <input class="form-control" name="title" required value="{{ job.title if job else '' }}">
@@ -19,6 +19,14 @@
     <div class="form-group">
       <label class="form-label">Company Name *</label>
       <input class="form-control" name="company" required value="{{ job.company if job else '' }}">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Company Logo <span class="label-hint">(optional)</span></label>
+      <input type="file" name="company_logo" accept="image/*" class="form-control">
+      {% if job and job.company_logo_data %}
+      <img src="{{ job.company_logo_data }}" alt="" style="width:48px;height:48px;object-fit:contain;background:#fff;border-radius:8px;margin-top:8px;padding:4px;">
+      {% endif %}
     </div>
 
     <div class="form-row">

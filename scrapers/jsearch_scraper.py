@@ -36,6 +36,8 @@ def map_employment_type(raw: str) -> str:
         'INTERN': 'internship',
         'INTERNSHIP': 'internship',
         'TEMPORARY': 'contract',
+        'FREELANCE': 'contract',
+        'REMOTE': 'remote',
     }
     return mapping.get(raw, 'full-time')
 
@@ -60,6 +62,12 @@ def extract_tags(title: str, desc: str) -> str:
         'postgresql', 'mysql', 'mongodb', 'redis', 'elasticsearch', 'graphql',
         'rest', 'api', 'machine learning', 'ai', 'data science', 'sql',
         'devops', 'ci/cd', 'agile', 'scrum', 'figma', 'ux', 'product',
+        'sales', 'marketing', 'accounting', 'finance', 'engineering', 'logistics',
+        'customer service', 'hr', 'human resources', 'admin', 'teaching',
+        'healthcare', 'medical', 'legal', 'procurement', 'ict', 'software',
+        'construction', 'oil and gas', 'ngo', 'hospitality', 'retail', 'security',
+        'driving', 'agriculture', 'banking', 'insurance', 'manufacturing', 'telecom', 
+        'media', 'entertainment', 'research', 'consulting', 'real estate',
     ]
     text = (title + ' ' + (desc or '')[:1000]).lower()
     found = [k for k in keywords if k in text]

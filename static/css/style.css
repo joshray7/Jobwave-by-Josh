@@ -906,6 +906,33 @@ tr:hover td { background: var(--indigo-dim); }
   .hero-actions .btn { width: 100%; justify-content: center; }
 }
 
+/* Job Search Tips card — mobile overflow fix */
+#tip-card {
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#tip-slider .tip-slide {
+  min-width: 0;
+}
+#tip-slider .tip-slide > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#tip-dots {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  #tip-card {
+    padding: 16px;
+    min-height: auto;
+  }
+  #tip-slider .tip-slide {
+    gap: 8px;
+  }
+}
+
 /* ── Animations ── */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }

@@ -103,7 +103,9 @@
   {% for job in jobs %}
   <div class="job-card">
     <div class="job-card-header">
-      <a href="/company/{{ job.company|urlencode }}" class="company-logo" title="View {{ job.company }} jobs" style="text-decoration:none;">{{ job.company[0] }}</a>
+      <a href="/company/{{ job.company|urlencode }}" class="company-logo" title="View {{ job.company }} jobs" style="text-decoration:none;position:relative;overflow:hidden;">
+        {{ company_logo_html(job) }}
+      </a>
       <div style="flex:1;min-width:0;padding-left:12px;">
         <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-title" style="color:var(--text);">{{ job.title }}</a>
         <a href="/company/{{ job.company|urlencode }}" class="job-company" style="color:var(--text-muted);text-decoration:none;">{{ job.company }}</a>
