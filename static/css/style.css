@@ -342,6 +342,27 @@ a:hover { color: #fff; }
   margin-bottom: 28px;
 }
 
+.stats-grid::hover {
+  color: var(--mint);
+}
+
+.stats-grid .staggered-fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.5s forwards;
+}
+
+.staggered-fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.5s forwards;
+}
+
+.stats-grid .staggered-fade-in:nth-child(1) { animation-delay: 0.1s; }
+.stats-grid .staggered-fade-in:nth-child(2) { animation-delay: 0.2s; }
+.stats-grid .staggered-fade-in:nth-child(3) { animation-delay: 0.3s; }
+
+
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);

@@ -24,3 +24,4 @@ if container:
     print(f"\nSTRIPPED STRINGS ({len(strings)} total):")
     for i, s in enumerate(strings):
         print(f"  [{i}] {s[:80]!r}")
+

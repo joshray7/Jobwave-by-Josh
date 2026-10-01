@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from tips import get_dashboard_tips
-import os, json, csv, io, threading, time, re, requests
+import os, json, csv, io, threading, time, re, requests, random, string, logging, json, urllib.parse
 from functools import wraps
 import base64
 from io import BytesIO
@@ -305,29 +305,123 @@ def validate_username(username):
         return 'Username can only contain lowercase letters, numbers, and underscores.'
     return None
 
-def post_to_telegram(text, photo_url=None):
+SITE_URL = os.environ.get('SITE_URL', '').rstrip('/')
+TELEGRAM_BANNER_URL = f'{SITE_URL}/static/img/telegram_banner.png' if SITE_URL else None
+
+
+def build_telegram_keyboard(job_url=None):
+    """Inline buttons under the post. Only valid http(s) URLs are included,
+    because one bad button URL makes Telegram reject the whole post."""
+    rows = []
+    if job_url and job_url.startswith(('http://', 'https://')):
+        rows.append([{'text': '💼 View & Apply', 'url': job_url}])
+    if SITE_URL.startswith(('http://', 'https://')):
+        rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
+    return {'inline_keyboard': rows} if rows else None
+
+
+def post_to_telegram(text, photo_url=None, job_url=None):
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     channel_id = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     if not token or not channel_id:
         return False
+
+    # Only real URLs can be sent as photos (a data: URI can't).
+    if photo_url and not photo_url.startswith(('http://', 'https://')):
+        photo_url = None
+
+    keyboard = build_telegram_keyboard(job_url)
+    caption = text if len(text) <= 1024 else text[:1000].rsplit('\n', 1)[0] + '\n…'
+
     try:
-        if photo_url:
-            caption = text if len(text) <= 1024 else text[:1000].rsplit('\n', 1)[0] + '\n…'
+        # Ladder: logo photo -> banner photo -> text only (buttons on every rung)
+        candidates = [p for p in (photo_url, TELEGRAM_BANNER_URL) if p]
+        for photo in dict.fromkeys(candidates):  # dedupe, keep order
+            payload = {'chat_id': channel_id, 'photo': photo,
+                       'caption': caption, 'parse_mode': 'HTML'}
+            if keyboard:
+                payload['reply_markup'] = keyboard
             resp = requests.post(
                 f'https://api.telegram.org/bot{token}/sendPhoto',
-                json={'chat_id': channel_id, 'photo': photo_url, 'caption': caption, 'parse_mode': 'HTML'},
-                timeout=10,
+                json=payload, timeout=10,
             )
             if resp.ok:
                 return True
+            app.logger.warning(f"Telegram sendPhoto failed: {resp.status_code} {resp.text[:200]}")
+
+        payload = {'chat_id': channel_id, 'text': text,
+                   'parse_mode': 'HTML', 'disable_web_page_preview': True}
+        if keyboard:
+            payload['reply_markup'] = keyboard
         resp = requests.post(
             f'https://api.telegram.org/bot{token}/sendMessage',
-            json={'chat_id': channel_id, 'text': text, 'parse_mode': 'HTML', 'disable_web_page_preview': False},
-            timeout=10,
+            json=payload, timeout=10,
         )
+        if not resp.ok:
+            app.logger.warning(f"Telegram sendMessage failed: {resp.status_code} {resp.text[:200]}")
         return resp.ok
     except Exception as e:
         app.logger.error(f"Telegram post failed: {e}")
+        return False
+
+SITE_URL = os.environ.get('SITE_URL', 'https://jobwave-by-josh.onrender.com')  # set this on Render
+BANNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           'static', 'img', 'telegram_banner.png')
+CAPTION_LIMIT = 1024
+
+
+def build_telegram_keyboard(job_url):
+    """Inline buttons under the post, like the reference channel."""
+    rows = []
+    if job_url:
+        rows.append([{'text': '💼 View & Apply', 'url': job_url}])
+    rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
+    return {'inline_keyboard': rows}
+
+
+def load_banner():
+    """Fallback image for jobs with no logo. Returns (filename, bytes) or None."""
+    try:
+        with open(BANNER_PATH, 'rb') as f:
+            return ('jobwave.png', f.read())
+    except OSError:
+        return None
+
+
+def send_telegram_post(caption, keyboard, photo=None, parse_mode=None):
+    """photo may be a URL string, a (filename, bytes) tuple, or None.
+    Ladder: photo + caption + buttons -> text + buttons."""
+    token = os.environ['TELEGRAM_BOT_TOKEN']      # rename if your env vars differ
+    chat_id = os.environ['TELEGRAM_CHAT_ID']
+    base = f'https://api.telegram.org/bot{token}'
+    markup = json.dumps(keyboard)  # form fields need a JSON *string*
+
+    if photo is not None:
+        data = {'chat_id': chat_id, 'caption': caption[:CAPTION_LIMIT], 'reply_markup': markup}
+        if parse_mode:
+            data['parse_mode'] = parse_mode
+        files = None
+        if isinstance(photo, str):
+            data['photo'] = photo            # Telegram fetches the URL itself
+        else:
+            files = {'photo': photo}         # we upload the bytes
+        try:
+            r = requests.post(f'{base}/sendPhoto', data=data, files=files, timeout=20)
+            if r.ok:
+                return True
+            print(f'[telegram] sendPhoto failed: {r.status_code} {r.text[:200]}')
+        except requests.RequestException as e:
+            print(f'[telegram] sendPhoto error: {e}')
+
+    data = {'chat_id': chat_id, 'text': caption, 'reply_markup': markup,
+            'disable_web_page_preview': True}
+    if parse_mode:
+        data['parse_mode'] = parse_mode
+    try:
+        r = requests.post(f'{base}/sendMessage', data=data, timeout=20)
+        return r.ok
+    except requests.RequestException as e:
+        print(f'[telegram] sendMessage error: {e}')
         return False
 
 def guess_company_domain(company):
@@ -891,7 +985,6 @@ def build_telegram_message(job):
     if summary:
         lines.append(f"📝 {summary}")
 
-    lines.append(f'\n🔗 <a href="{internal_url}">APPLY</a>')
     lines.append(f"{flag} Source: {job.source}")
     lines.append("🤖 JobWave — Find your next job")
 

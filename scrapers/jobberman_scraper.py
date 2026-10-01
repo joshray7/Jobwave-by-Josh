@@ -137,12 +137,21 @@ def parse_job_card(title_tag):
         # Card order: company, "location worktype salary", category, time ago, description
         company = strings[0] if strings else 'Unknown'
 
-        loc_line, work_type_match = '', ''
-        for s in strings:
+        loc_line, work_type_match, location_text = '', '', ''
+        for i, s in enumerate(strings[1:], start=1):  # skip index 0: that's the company
             wt = next((w for w in WORK_TYPES if w in s), '')
-            if wt:
-                loc_line, work_type_match = s, wt
-                break
+            if not wt:
+                continue
+            work_type_match = wt
+            if s == wt:
+                # work type is its own string -> the city is the string before it
+                loc_line = strings[i - 1]
+                location_text = loc_line
+            else:
+                # combined line like "Lagos Full Time" -> keep the old behaviour
+                loc_line = s
+                location_text = s.split(wt)[0].strip()
+            break
 
         category_match = next((s for s in strings if s in CATEGORY_LIST), '')
 
@@ -153,10 +162,8 @@ def parse_job_card(title_tag):
         )
         posted_at = parse_posted_date(date_match.group(1)) if date_match else datetime.utcnow()
 
-        location = 'Nigeria'
-        if loc_line and work_type_match:
-            location = loc_line.split(work_type_match)[0].strip() or 'Nigeria'
-        if 'remote' in loc_line.lower():
+        location = location_text if location_text and location_text != company else 'Nigeria'
+        if 'remote' in location_text.lower():
             location = 'Remote'
 
         candidates = [
