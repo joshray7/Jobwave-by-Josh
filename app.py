@@ -305,6 +305,9 @@ def validate_username(username):
         return 'Username can only contain lowercase letters, numbers, and underscores.'
     return None
 
+def is_safe_redirect(target):
+    return bool(target) and target.startswith('/') and not target.startswith('//') and '\\' not in target
+
 SITE_URL = (os.environ.get('SITE_URL') or os.environ.get('APP_URL')
             or 'https://jobwave-by-josh.onrender.com').rstrip('/')
 BANNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -321,7 +324,7 @@ def build_telegram_keyboard(job_url=None):
     whole post, so only valid http(s) URLs are included."""
     rows = []
     if job_url and job_url.startswith(('http://', 'https://')):
-        rows.append([{'text': '💼 View Job', 'url': job_url}])
+        rows.append([{'text': '💼 View & Apply', 'url': job_url}])
     rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
     return {'inline_keyboard': rows}
 
@@ -380,9 +383,13 @@ def post_to_telegram(text, photo_url=None, job_url=None):
         }, timeout=10)
         if not resp.ok:
             app.logger.warning(f"Telegram sendMessage failed: {resp.status_code} {resp.text[:200]}")
+            if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
+                return False
         return resp.ok
     except Exception as e:
         app.logger.error(f"Telegram post failed: {e}")
+        if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
+                return False
         return False
 
 def guess_company_domain(company):
@@ -490,6 +497,8 @@ def register():
         elif username_error:
             flash(username_error, 'error')
         elif User.query.filter_by(username=username).first():
+            flash('That username is already taken.', 'error')
+        elif User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
         elif len(password) < 6:
             flash('Password must be at least 6 characters.', 'error')
@@ -532,7 +541,7 @@ def login():
         if user and user.check_password(password) and user.is_active:
             login_user(user, remember=request.form.get('remember'))
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard'))
+            return redirect(next_page if is_safe_redirect(next_page) else url_for('dashboard'))
         flash('Invalid email or password.', 'error')
     return render_template('login.html')
 
@@ -737,33 +746,48 @@ def jobs():
                            source=source, sort=sort)
 
 
+def can_view_job(job):
+    """Public: live, approved jobs. Otherwise only the poster, admins, or users tracking it."""
+    if job.is_active and job.approval_status == 'approved':
+        return True
+    if not current_user.is_authenticated:
+        return False
+    if current_user.role == 'admin' or job.posted_by_user_id == current_user.id:
+        return True
+    return (Application.query.filter_by(user_id=current_user.id, job_id=job.id).first() is not None
+            or SavedJob.query.filter_by(user_id=current_user.id, job_id=job.id).first() is not None)
+
+
 @app.route('/jobs/<int:job_id>')
-@login_required
+@limiter.limit('120 per minute')
 def job_detail(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = Job.query.get(job_id)
+    if not job or not can_view_job(job):
+        flash('That job is no longer available.', 'info')
+        return redirect(url_for('jobs') if current_user.is_authenticated else url_for('index'))
 
     job.views += 1
     db.session.commit()
 
     if job.description:
         soup = BeautifulSoup(job.description, "html.parser")
-
+        for bad in soup(['script', 'style', 'iframe', 'object', 'embed', 'form']):
+            bad.decompose()
         for tag in soup.find_all(True):
             tag.attrs = {}
-
         job.description = str(soup)
     else:
         job.description = ""
 
-    is_saved = SavedJob.query.filter_by(
-        user_id=current_user.id,
-        job_id=job_id
-    ).first() is not None
-
-    application = Application.query.filter_by(
-        user_id=current_user.id,
-        job_id=job_id
-    ).first()
+    is_saved = False
+    application = None
+    if current_user.is_authenticated:
+        is_saved = SavedJob.query.filter_by(
+            user_id=current_user.id, job_id=job_id
+        ).first() is not None
+        application = Application.query.filter_by(
+            user_id=current_user.id, job_id=job_id
+        ).first()
 
     similar = Job.query.filter(
         Job.id != job_id,
@@ -771,13 +795,8 @@ def job_detail(job_id):
         Job.title.ilike(f'%{job.title.split()[0]}%')
     ).limit(4).all()
 
-    return render_template(
-        'job_detail.html',
-        job=job,
-        is_saved=is_saved,
-        application=application,
-        similar=similar
-    )
+    return render_template('job_detail.html', job=job, is_saved=is_saved,
+                           application=application, similar=similar)
 
 # ─── Saved Jobs ────────────────────────────────────────────────────────────────
 
@@ -919,7 +938,6 @@ def build_whatsapp_message(job):
 def build_telegram_message(job):
     NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
     flag = "🇳🇬" if job.source in NIGERIAN_SOURCES else "🌍"
-    internal_url = f"{os.environ.get('APP_URL', 'https://jobwave-by-josh.onrender.com')}/jobs/{job.id}"
 
     job_type_map = {
         'full-time': 'Full-time', 'part-time': 'Part-time',
@@ -930,23 +948,23 @@ def build_telegram_message(job):
     job_type_label = job_type_map.get((job.job_type or '').lower(), (job.job_type or 'Full-time').title())
 
     lines = [
-        f"🚨 <b>NEW JOB — JOBWAVE</b>",
-        f"💼 <b>{job.title}</b>",
-        f"🏢 {job.company or 'Unknown'}",
+        "🚨 <b>NEW JOB — JOBWAVE</b>",
+        f"💼 <b>{escape(job.title)}</b>",
+        f"🏢 {escape(job.company or 'Unknown')}",
     ]
     if job.location:
-        lines.append(f"📍 {job.location}")
-    lines.append(f"🕐 {job_type_label}")
+        lines.append(f"📍 {escape(job.location)}")
+    lines.append(f"🕐 {escape(job_type_label)}")
 
     exp_label = exp_map.get((job.experience or '').lower())
     if exp_label:
-        lines.append(f"📊 {exp_label}")
+        lines.append(f"📊 {escape(exp_label)}")
 
     summary = one_line_summary(job.description)
     if summary:
-        lines.append(f"📝 {summary}")
+        lines.append(f"📝 {escape(summary)}")
 
-    lines.append(f"{flag} Source: {job.source}")
+    lines.append(f"{flag} Source: {escape(job.source)}")
     lines.append("🤖 JobWave — Find your next job")
 
     return "\n".join(lines)
@@ -956,6 +974,26 @@ from job_quality import (
     clean_description, validate_scraped_job,
 )
 
+def publish_job_to_telegram(job):
+    """Post a job to Telegram; mark it posted only if Telegram accepted it."""
+    if os.environ.get('SKIP_TELEGRAM') == '1':
+        # Temporary switch for the one scrape after the Neon cleanup, so deleted
+        # jobs aren't re-posted. Remove the env var afterwards.
+        job.posted_to_telegram = True
+        db.session.commit()
+        return True
+
+    sent = post_to_telegram(
+        build_telegram_message(job),
+        photo_url=company_logo_url(job.company),
+        job_url=telegram_job_url(job),
+    )
+    if sent:
+        job.posted_to_telegram = True
+        db.session.commit()
+    else:
+        app.logger.warning(f"Telegram post failed for job {job.id}; not marked as posted")
+    return sent
 
 def process_scraped_job(jd):
     """
@@ -1609,12 +1647,10 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
             for job in newly_added_jobs:
                 if job.approval_status == 'approved':
                     try:
-                        post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company), job_url=telegram_job_url(job))
-                        job.posted_to_telegram = True
-                        db.session.commit()
-                        time.sleep(1.5)
+                        publish_job_to_telegram(job)
                     except Exception as e:
                         app.logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
+                    time.sleep(3)  # stay under Telegram's per-chat rate limit
 
             log = ScraperLog.query.get(log_id)
             if log:
@@ -2127,9 +2163,7 @@ def approve_employer_job(job_id):
 
     if not job.posted_to_telegram:
         try:
-            post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company), job_url=telegram_job_url(job))
-            job.posted_to_telegram = True
-            db.session.commit()
+            publish_job_to_telegram(job)
         except Exception as e:
             app.logger.error(f"Telegram post failed after approval: {e}")
 
@@ -2166,9 +2200,7 @@ def edit_approve_job(job_id):
 
         if not job.posted_to_telegram:
             try:
-                post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company), job_url=telegram_job_url(job))
-                job.posted_to_telegram = True
-                db.session.commit()
+                publish_job_to_telegram(job)
             except Exception as e:
                 app.logger.error(f"Telegram post failed after edit-approve: {e}")
 
