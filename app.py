@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
+from sqlalchemy.exc import IntegrityError
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from tips import get_dashboard_tips
@@ -325,7 +326,7 @@ def build_telegram_keyboard(job_url=None):
     rows = []
     if job_url and job_url.startswith(('http://', 'https://')):
         rows.append([{'text': '💼 View & Apply', 'url': job_url}])
-    rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
+        rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
     return {'inline_keyboard': rows}
 
 
@@ -484,6 +485,14 @@ def index():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
+
+    if request.method == 'GET':
+        next_url = request.args.get('next')
+        if is_safe_redirect(next_url):
+            session['post_signup_next'] = next_url
+        else:
+            session.pop('post_signup_next', None)  # don't reuse a stale link from an old visit
+
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         username_raw = request.form.get('username', '').strip()
@@ -505,11 +514,16 @@ def register():
         else:
             is_first_user = User.query.count() == 0
             user = User(name=name, email=email, username=username,
-                       role='admin' if is_first_user else 'pending',
-                       is_verified=True)
+                        role='admin' if is_first_user else 'pending',
+                        is_verified=True)
             user.set_password(password)
             db.session.add(user)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('That email or username was just taken. Please try again.', 'error')
+                return render_template('register.html')
             login_user(user)
             flash(f'Welcome aboard, {name}!', 'success')
 
@@ -977,8 +991,9 @@ from job_quality import (
 def publish_job_to_telegram(job):
     """Post a job to Telegram; mark it posted only if Telegram accepted it."""
     if os.environ.get('SKIP_TELEGRAM') == '1':
-        # Temporary switch for the one scrape after the Neon cleanup, so deleted
-        # jobs aren't re-posted. Remove the env var afterwards.
+        # Temporary switch for the one scrape after the Neon cleanup.
+        # Loud on purpose: if you forget to remove it, jobs silently stop posting.
+        app.logger.warning(f"SKIP_TELEGRAM is on: job {job.id} marked as posted without posting")
         job.posted_to_telegram = True
         db.session.commit()
         return True
@@ -2527,8 +2542,9 @@ def choose_account_type():
             return render_template('choose_account_type.html')
         current_user.role = account_type
         db.session.commit()
-        return redirect(url_for('dashboard'))
-
+        next_url = session.pop('post_signup_next', None)
+        return redirect(next_url if is_safe_redirect(next_url) else url_for('dashboard'))
+    
     return render_template('choose_account_type.html')
 
 # ----------- TERMS OF SERVICE AND PRIVACY POLICY PAGES -----------------
