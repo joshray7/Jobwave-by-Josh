@@ -16,10 +16,10 @@ def test_telegram_message_escapes_html():
 
 
 def test_keyboard_has_only_view_and_apply():
-    kb = app_module.build_telegram_keyboard('https://example.com/jobs/1')
+    kb = app_module.build_telegram_keyboard('https://jobwave.com.ng/jobs/1')
     buttons = [b for row in kb['inline_keyboard'] for b in row]
     assert len(buttons) == 1
-    assert buttons[0]['url'] == 'https://example.com/jobs/1'
+    assert buttons[0]['url'] == 'https://jobwave.com.ng/jobs/1'
     assert 'Apply' in buttons[0]['text']
 
 

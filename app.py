@@ -310,7 +310,7 @@ def is_safe_redirect(target):
     return bool(target) and target.startswith('/') and not target.startswith('//') and '\\' not in target
 
 SITE_URL = (os.environ.get('SITE_URL') or os.environ.get('APP_URL')
-            or 'https://jobwave-by-josh.onrender.com').rstrip('/')
+            or 'https://jobwave.com.ng').rstrip('/')
 BANNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            'static', 'img', 'telegram_banner.png')
 
@@ -944,7 +944,7 @@ def build_whatsapp_message(job):
         for r in reqs:
             lines.append(f"• {r}")
 
-    internal_url = f"{os.environ.get('APP_URL', 'https://jobwave-by-josh.onrender.com')}/jobs/{job.id}"
+    internal_url = f"{os.environ.get('APP_URL', 'https://jobwave.com.ng')}/jobs/{job.id}"
     lines.append(f"🔗 APPLY: {internal_url}")
     lines.append(f"📌 Source: {job.source}")
     lines.append("🤖 JobWave — Find your next job")

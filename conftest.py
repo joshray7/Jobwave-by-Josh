@@ -4,6 +4,8 @@ import tempfile
 import pytest
 
 os.environ['SKIP_SCHEDULER'] = '1'
+os.environ['TELEGRAM_BOT_TOKEN'] = '1'
+os.environ['TELEGRAM_CHANNEL_ID'] = '1'
 
 db_fd, db_path = tempfile.mkstemp(suffix='.db')
 os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
