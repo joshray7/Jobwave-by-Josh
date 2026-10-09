@@ -319,16 +319,12 @@ def telegram_job_url(job):
     """Link to the job's own JobWave page."""
     return f"{SITE_URL}/jobs/{job.id}"
 
-
 def build_telegram_keyboard(job_url=None):
-    """Inline buttons under the post. A bad button URL makes Telegram reject the
-    whole post, so only valid http(s) URLs are included."""
-    rows = []
+    """One 'View & Apply' button. Returns None when there is no valid link,
+    because a bad button URL makes Telegram reject the whole post."""
     if job_url and job_url.startswith(('http://', 'https://')):
-        rows.append([{'text': '💼 View & Apply', 'url': job_url}])
-        rows.append([{'text': '📋 View All Jobs', 'url': SITE_URL}])
-    return {'inline_keyboard': rows}
-
+        return {'inline_keyboard': [[{'text': '💼 View & Apply', 'url': job_url}]]}
+    return None
 
 def load_banner():
     """JobWave banner bytes, or None (with a log line) if the file is missing."""
@@ -351,46 +347,52 @@ def post_to_telegram(text, photo_url=None, job_url=None):
         photo_url = None
 
     keyboard = build_telegram_keyboard(job_url)
+    if keyboard is None:
+        app.logger.warning("Telegram post without a valid job_url; sending without a button")
     caption = text if len(text) <= 1024 else text[:1000].rsplit('\n', 1)[0] + '\n…'
     api = f'https://api.telegram.org/bot{token}'
 
     try:
         # Rung 1: company logo. Telegram fetches it from the URL.
         if photo_url:
-            resp = requests.post(f'{api}/sendPhoto', json={
-                'chat_id': channel_id, 'photo': photo_url, 'caption': caption,
-                'parse_mode': 'HTML', 'reply_markup': keyboard,
-            }, timeout=10)
+            payload = {'chat_id': channel_id, 'photo': photo_url,
+                       'caption': caption, 'parse_mode': 'HTML'}
+            if keyboard:
+                payload['reply_markup'] = keyboard
+            resp = requests.post(f'{api}/sendPhoto', json=payload, timeout=10)
             if resp.ok:
                 return True
             app.logger.warning(f"Telegram logo photo failed: {resp.status_code} {resp.text[:200]}")
+            if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
+                return False
 
         # Rung 2: JobWave banner. We upload the bytes ourselves (multipart),
         # so Telegram never has to call back into a sleeping Render server.
         banner = load_banner()
         if banner:
-            resp = requests.post(f'{api}/sendPhoto', data={
-                'chat_id': channel_id, 'caption': caption, 'parse_mode': 'HTML',
-                'reply_markup': json.dumps(keyboard),  # multipart fields must be strings
-            }, files={'photo': ('jobwave.png', banner, 'image/png')}, timeout=20)
+            data = {'chat_id': channel_id, 'caption': caption, 'parse_mode': 'HTML'}
+            if keyboard:
+                data['reply_markup'] = json.dumps(keyboard)  # multipart fields must be strings
+            resp = requests.post(f'{api}/sendPhoto', data=data,
+                                 files={'photo': ('jobwave.png', banner, 'image/png')},
+                                 timeout=20)
             if resp.ok:
                 return True
             app.logger.warning(f"Telegram banner upload failed: {resp.status_code} {resp.text[:200]}")
+            if resp.status_code == 429:
+                return False
 
-        # Rung 3: text only, still with buttons.
-        resp = requests.post(f'{api}/sendMessage', json={
-            'chat_id': channel_id, 'text': text, 'parse_mode': 'HTML',
-            'disable_web_page_preview': True, 'reply_markup': keyboard,
-        }, timeout=10)
+        # Rung 3: text only, still with the button.
+        payload = {'chat_id': channel_id, 'text': text, 'parse_mode': 'HTML',
+                   'disable_web_page_preview': True}
+        if keyboard:
+            payload['reply_markup'] = keyboard
+        resp = requests.post(f'{api}/sendMessage', json=payload, timeout=10)
         if not resp.ok:
             app.logger.warning(f"Telegram sendMessage failed: {resp.status_code} {resp.text[:200]}")
-            if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
-                return False
         return resp.ok
     except Exception as e:
         app.logger.error(f"Telegram post failed: {e}")
-        if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
-                return False
         return False
 
 def guess_company_domain(company):
