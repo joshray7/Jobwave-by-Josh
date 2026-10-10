@@ -952,36 +952,27 @@ def build_whatsapp_message(job):
     return "\n".join(lines)
 
 def build_telegram_message(job):
-    NIGERIAN_SOURCES = {'MyJobMag', 'HotNigerianJobs', 'Jobberman'}
-    flag = "🇳🇬" if job.source in NIGERIAN_SOURCES else "🌍"
-
     job_type_map = {
         'full-time': 'Full-time', 'part-time': 'Part-time',
         'remote': 'Remote', 'contract': 'Contract', 'internship': 'Internship',
     }
     exp_map = {'entry': 'Entry-level', 'mid': 'Mid-level', 'senior': 'Senior-level', 'lead': 'Lead-level'}
 
-    job_type_label = job_type_map.get((job.job_type or '').lower(), (job.job_type or 'Full-time').title())
+    details = [job_type_map.get((job.job_type or '').lower(), (job.job_type or 'Full-time').title())]
+    exp_label = exp_map.get((job.experience or '').lower())
+    if exp_label:
+        details.append(exp_label)
 
     lines = [
         "🚨 <b>NEW JOB — JOBWAVE</b>",
+        "",
         f"💼 <b>{escape(job.title)}</b>",
         f"🏢 {escape(job.company or 'Unknown')}",
     ]
     if job.location:
         lines.append(f"📍 {escape(job.location)}")
-    lines.append(f"🕐 {escape(job_type_label)}")
-
-    exp_label = exp_map.get((job.experience or '').lower())
-    if exp_label:
-        lines.append(f"📊 {escape(exp_label)}")
-
-    summary = one_line_summary(job.description)
-    if summary:
-        lines.append(f"📝 {escape(summary)}")
-
-    lines.append(f"{flag} Source: {escape(job.source)}")
-    lines.append("🤖 JobWave — Find your next job")
+    lines.append("🕐 " + " · ".join(escape(d) for d in details))
+    lines += ["", "Tap below to view the full posting and apply.", "", "🤖 JobWave — Find your next job"]
 
     return "\n".join(lines)
 

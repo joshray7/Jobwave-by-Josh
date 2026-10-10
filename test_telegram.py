@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 import app as app_module
-
+import pathlib
 
 def test_telegram_message_escapes_html():
     job = SimpleNamespace(
@@ -11,8 +11,7 @@ def test_telegram_message_escapes_html():
     text = app_module.build_telegram_message(job)
     assert '<Remote>' not in text
     assert '&lt;Remote&gt;' in text
-    assert '<b>skills</b>' not in text
-    assert '&lt;b&gt;skills&lt;/b&gt;' in text
+    assert 'skills' not in text  # the description is intentionally not in the short caption
 
 
 def test_keyboard_has_only_view_and_apply():
@@ -26,3 +25,15 @@ def test_keyboard_has_only_view_and_apply():
 def test_keyboard_is_none_without_a_valid_link():
     assert app_module.build_telegram_keyboard(None) is None
     assert app_module.build_telegram_keyboard('not-a-url') is None
+
+
+def test_telegram_is_only_called_through_the_publish_helper():
+    callers = []
+    for path in list(pathlib.Path('.').glob('*.py')) + list(pathlib.Path('scrapers').glob('*.py')):
+        if path.name.startswith('test_'):
+            continue
+        for line in path.read_text(encoding='utf-8').splitlines():
+            if 'post_to_telegram(' in line and 'def post_to_telegram' not in line:
+                callers.append(path.name)
+    # exactly one call, inside publish_job_to_telegram in app.py
+    assert callers == ['app.py']

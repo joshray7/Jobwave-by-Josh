@@ -9,6 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
 import time
+import os
 
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler(timezone='Africa/Lagos')
@@ -30,7 +31,7 @@ def run_daily_scraper(app):
         logger.info("Scheduler: starting daily scrape...")
 
         def run_profile(profile_name, fetch_fn, kwargs):
-            from app import process_scraped_job, post_to_telegram, build_telegram_message, guess_company_domain, company_logo_url
+            from app import process_scraped_job, publish_job_to_telegram
             log = ScraperLog(source=profile_name, status='running')
             db.session.add(log)
             db.session.commit()
@@ -62,12 +63,11 @@ def run_daily_scraper(app):
                 for job in newly_added_jobs:
                     if job.approval_status == 'approved':
                         try:
-                            post_to_telegram(build_telegram_message(job), photo_url=company_logo_url(job.company))
-                            job.posted_to_telegram = True
-                            db.session.commit()
-                            time.sleep(1.5)
+                            publish_job_to_telegram(job)
                         except Exception as e:
                             logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
+                        if os.environ.get('SKIP_TELEGRAM') != '1':
+                            time.sleep(3)  # stay under Telegram's per-chat rate limit
 
                 log.status = 'success'
                 log.jobs_found = len(jobs_data)
