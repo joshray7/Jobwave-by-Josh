@@ -18,7 +18,7 @@ scheduler = BackgroundScheduler(timezone='Africa/Lagos')
 def run_daily_scraper(app):
     """Fetch fresh jobs from all profiles — JSearch, Remotive, Muse, Adzuna."""
     with app.app_context():
-        from app import db, Job, ScraperLog
+        from app import process_scraped_job, publish_job_to_telegram, Job, ScraperLog, db
         from scrapers.jsearch_scraper import fetch_jsearch_jobs, SEARCH_PROFILES
         from scrapers.remotive_scraper import fetch_remotive_jobs, REMOTIVE_PROFILES
         from scrapers.muse_scraper import fetch_muse_jobs, MUSE_PROFILES
@@ -29,6 +29,7 @@ def run_daily_scraper(app):
         from datetime import datetime
 
         logger.info("Scheduler: starting daily scrape...")
+        run_new_job_ids = []  # new, auto-approved jobs from the whole run; posted once at the end
 
         def run_profile(profile_name, fetch_fn, kwargs):
             from app import process_scraped_job, publish_job_to_telegram
@@ -59,15 +60,8 @@ def run_daily_scraper(app):
                         added += 1
                 db.session.commit()
 
-                # Auto-post only jobs that were auto-approved (clean, unflagged)
-                for job in newly_added_jobs:
-                    if job.approval_status == 'approved':
-                        try:
-                            publish_job_to_telegram(job)
-                        except Exception as e:
-                            logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
-                        if os.environ.get('SKIP_TELEGRAM') != '1':
-                            time.sleep(3)  # stay under Telegram's per-chat rate limit
+                # Remember clean, auto-approved jobs; posting happens once, after all profiles
+                run_new_job_ids.extend(j.id for j in newly_added_jobs if j.approval_status == 'approved')
 
                 log.status = 'success'
                 log.jobs_found = len(jobs_data)
@@ -135,6 +129,18 @@ def run_daily_scraper(app):
                 'category_path': p.get('category_path'),
                 'num_pages': p.get('num_pages', 1),
             })
+
+        # Post only the best new jobs from the whole run (capped, Nigerian sources first)
+        from app import pick_jobs_to_post, publish_job_to_telegram
+        if run_new_job_ids:
+            new_jobs = Job.query.filter(Job.id.in_(run_new_job_ids)).all()
+            for job in pick_jobs_to_post(new_jobs):
+                try:
+                    publish_job_to_telegram(job)
+                except Exception as e:
+                    logger.error(f"Telegram auto-post failed for job {job.id}: {e}")
+                if os.environ.get('SKIP_TELEGRAM') != '1':
+                    time.sleep(3)
 
 def run_alert_emails(app):
     """Send job alert emails to users with active alerts."""

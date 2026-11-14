@@ -17,6 +17,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from markupsafe import Markup, escape
+from collections import defaultdict, deque
 
 load_dotenv()
 
@@ -335,8 +336,9 @@ def load_banner():
         app.logger.warning(f"Telegram banner not found at {BANNER_PATH}")
         return None
 
-
+_banner_file_id = None  # Telegram's id for the uploaded banner; reused so the image is sent once
 def post_to_telegram(text, photo_url=None, job_url=None):
+    global _banner_file_id
     token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     channel_id = os.environ.get('TELEGRAM_CHANNEL_ID', '')
     if not token or not channel_id:
@@ -366,17 +368,33 @@ def post_to_telegram(text, photo_url=None, job_url=None):
             if resp.status_code == 429:  # rate-limited: other rungs would only make it worse
                 return False
 
-        # Rung 2: JobWave banner. We upload the bytes ourselves (multipart),
-        # so Telegram never has to call back into a sleeping Render server.
+            # Rung 2: JobWave banner. Upload once, then reuse Telegram's file_id.
+        if _banner_file_id:
+            payload = {'chat_id': channel_id, 'photo': _banner_file_id,
+                       'caption': caption, 'parse_mode': 'HTML'}
+            if keyboard:
+                payload['reply_markup'] = keyboard
+            resp = requests.post(f'{api}/sendPhoto', json=payload, timeout=10)
+            if resp.ok:
+                return True
+            app.logger.warning(f"Telegram banner (file_id) failed: {resp.status_code} {resp.text[:200]}")
+            if resp.status_code == 429:
+                return False
+            _banner_file_id = None  # stale id: fall through to a fresh upload
+
         banner = load_banner()
         if banner:
             data = {'chat_id': channel_id, 'caption': caption, 'parse_mode': 'HTML'}
             if keyboard:
-                data['reply_markup'] = json.dumps(keyboard)  # multipart fields must be strings
+                data['reply_markup'] = json.dumps(keyboard)
             resp = requests.post(f'{api}/sendPhoto', data=data,
                                  files={'photo': ('jobwave.png', banner, 'image/png')},
                                  timeout=20)
             if resp.ok:
+                try:
+                    _banner_file_id = resp.json()['result']['photo'][-1]['file_id']
+                except Exception:
+                    pass  # posting worked; we just upload again next time
                 return True
             app.logger.warning(f"Telegram banner upload failed: {resp.status_code} {resp.text[:200]}")
             if resp.status_code == 429:
@@ -947,7 +965,7 @@ def build_whatsapp_message(job):
     internal_url = f"{os.environ.get('APP_URL', 'https://jobwave.com.ng')}/jobs/{job.id}"
     lines.append(f"🔗 APPLY: {internal_url}")
     lines.append(f"📌 Source: {job.source}")
-    lines.append("🤖 JobWave — Find your next job")
+    lines.append("🤖 JobWave — Find Jobs Faster, Track Smarter")
 
     return "\n".join(lines)
 
@@ -972,7 +990,7 @@ def build_telegram_message(job):
     if job.location:
         lines.append(f"📍 {escape(job.location)}")
     lines.append("🕐 " + " · ".join(escape(d) for d in details))
-    lines += ["", "Tap below to view the full posting and apply.", "", "🤖 JobWave — Find your next job"]
+    lines += ["", "Tap below to view the full posting and apply.", "", "🤖 JobWave — Find Jobs Faster, Track Smarter"]
 
     return "\n".join(lines)
 
@@ -1002,6 +1020,35 @@ def publish_job_to_telegram(job):
     else:
         app.logger.warning(f"Telegram post failed for job {job.id}; not marked as posted")
     return sent
+
+MAX_TELEGRAM_POSTS_PER_RUN = int(os.environ.get('MAX_TELEGRAM_POSTS_PER_RUN', '20'))
+LOCAL_SOURCES = {'myjobmag', 'hotnigerianjobs', 'jobberman'}  # compared in lowercase
+LOCAL_SHARE = 0.7  # share of the quota reserved for Nigerian sources
+
+
+def pick_jobs_to_post(jobs, limit=None):
+    """Choose which new jobs get a Telegram post: approved only, mostly Nigerian
+    sources, rotating across sources so no single source fills the quota."""
+    limit = MAX_TELEGRAM_POSTS_PER_RUN if limit is None else limit
+    local, other = defaultdict(deque), defaultdict(deque)
+    for job in jobs:
+        if job.approval_status != 'approved':
+            continue
+        group = local if (job.source or '').lower() in LOCAL_SOURCES else other
+        group[job.source or ''].append(job)
+
+    def take(queues, n):
+        out = []
+        while len(out) < n and any(queues.values()):
+            for source in sorted(queues):
+                if queues[source] and len(out) < n:
+                    out.append(queues[source].popleft())
+        return out
+
+    picked = take(local, round(limit * LOCAL_SHARE))
+    picked += take(other, limit - len(picked))
+    picked += take(local, limit - len(picked))  # slots the other group couldn't fill
+    return picked
 
 def process_scraped_job(jd):
     """
@@ -1652,8 +1699,8 @@ def run_scraper_task_with_log(profile_name, log_id, app_context):
             db.session.commit()
 
             # Auto-post only jobs that were auto-approved (clean, unflagged)
-            for job in newly_added_jobs:
-                if job.approval_status == 'approved':
+            for job in pick_jobs_to_post(newly_added_jobs):
+                if True:
                     try:
                         publish_job_to_telegram(job)
                     except Exception as e:
