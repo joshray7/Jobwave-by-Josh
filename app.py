@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_limiter import Limiter
@@ -315,6 +315,9 @@ SITE_URL = (os.environ.get('SITE_URL') or os.environ.get('APP_URL')
 BANNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            'static', 'img', 'telegram_banner.png')
 
+@app.context_processor
+def inject_site_url():
+    return {'site_url': SITE_URL}  # templates use this to build canonical and preview-card URLs
 
 def telegram_job_url(job):
     """Link to the job's own JobWave page."""
@@ -2329,6 +2332,49 @@ def cron_expire_jobs():
 @app.route('/ping')
 def ping():
     return jsonify({'status': 'awake'})
+
+@app.route('/robots.txt')
+def robots_txt():
+    body = "\n".join([
+        "User-agent: *",
+        "Disallow: /api/",
+        "Disallow: /admin",
+        "Disallow: /internal/",
+        "Disallow: /login",
+        "Disallow: /register",
+        "Disallow: /forgot-password",
+        "Disallow: /reset-password/",
+        "Disallow: /verify-email/",
+        "Disallow: /dashboard",
+        "Disallow: /export/",
+        "Disallow: /jobs/*/apply",
+        "",
+        f"Sitemap: {SITE_URL}/sitemap.xml",
+    ])
+    return Response(body, mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    from xml.sax.saxutils import escape as xml_escape
+    urls = [(f"{SITE_URL}/", None)]
+    for endpoint in ('faq', 'privacy', 'terms', 'contact'):
+        urls.append((SITE_URL + url_for(endpoint), None))
+    rows = db.session.query(Job.id, Job.scraped_at).filter(
+        Job.is_active == True, Job.approval_status == 'approved'
+    ).order_by(Job.scraped_at.desc()).limit(50000).all()
+    for job_id, scraped_at in rows:
+        urls.append((f"{SITE_URL}/jobs/{job_id}", scraped_at))
+
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for loc, lastmod in urls:
+        entry = f"<url><loc>{xml_escape(loc)}</loc>"
+        if lastmod:
+            entry += f"<lastmod>{lastmod.strftime('%Y-%m-%d')}</lastmod>"
+        parts.append(entry + "</url>")
+    parts.append('</urlset>')
+    return Response("\n".join(parts), mimetype='application/xml')
 
 
 # ----- POSTING SECTION -------------------------------------

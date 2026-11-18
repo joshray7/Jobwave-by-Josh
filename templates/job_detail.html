@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}{{ job.title }} at {{ job.company }}{% endblock %}
 {% block page_title %}Job Details{% endblock %}
+{% block meta_description %}{{ job.title }} at {{ job.company }}{% if job.location %} in {{ job.location }}{% endif %}. See the full details and apply on JobWave.{% endblock %}
+{% block og_title %}{{ job.title }} at {{ job.company }} | JobWave{% endblock %}
+{% block robots %}{% if job.is_active and job.approval_status == 'approved' %}index, follow{% else %}noindex{% endif %}{% endblock %}
 
 {% block content %}
   {% include '_job_detail_body.html' %}

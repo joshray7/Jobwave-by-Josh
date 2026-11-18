@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}JobWave{% endblock %} — JobWave</title>
+  <meta name="description" content="{% block meta_description %}JobWave helps you find jobs in Nigeria and worldwide, save them, and track your applications in one place.{% endblock %}">
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ site_url }}{{ request.path }}{% endblock %}">
+  <meta property="og:site_name" content="JobWave">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ self.canonical() }}">
+  <meta property="og:title" content="{% block og_title %}JobWave: Find Jobs Faster, Track Smarter{% endblock %}">
+  <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:image" content="{{ site_url }}/static/img/telegram_banner.png">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>
